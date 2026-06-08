@@ -10,7 +10,7 @@
 直接双击 `index.html` 用任意现代浏览器打开即可，无需安装。
 
 ### 2. 桌面 App（不依赖浏览器）
-双击 **`启动桌面版.bat`**：
+双击 **`StartDesktopVision.bat`**：
 - 首次运行会自动 `npm install` 安装 Electron（需已装 [Node.js](https://nodejs.org)，仅第一次需联网）。
 - 之后即以独立窗口启动，和浏览器无关。
 
