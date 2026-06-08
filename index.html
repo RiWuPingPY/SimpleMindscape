@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>脉络 · Mindscape | 思维导图 / 逻辑图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+        :root {
+            --bg: #F2F0E9;
+            --ink: #2B2826;
+            --ink-soft: #5C5954;
+            --ink-faint: #8C8475;
+            --fuchsia: #DB2777;
+            --violet: #7C3AED;
+            --true: #10B981;
+            --false: #E11D48;
+            --line: rgba(124, 58, 237, 0.32);
+            --node-bg: #ffffff;
+            --blob-a: #FBCFE8;
+            --blob-b: #DDD6FE;
+        }
+        /* ===== 颜色主题 ===== */
+        body[data-theme="rose"] { --bg:#FBF1F4; --fuchsia:#E11D74; --violet:#9D2C7E; --line:rgba(157,44,126,.3); --blob-a:#FBCFE8; --blob-b:#FBD5E6; }
+        body[data-theme="mint"] { --bg:#EDF5EF; --fuchsia:#0E9F6E; --violet:#2F855A; --line:rgba(47,133,90,.3); --blob-a:#C6F6D5; --blob-b:#D7EFE0; }
+        body[data-theme="sky"]  { --bg:#EDF3FA; --fuchsia:#2563EB; --violet:#0E7490; --line:rgba(37,99,235,.3); --blob-a:#CFE0FB; --blob-b:#CDEAF2; }
+        body[data-theme="sand"] { --bg:#F6F0E5; --fuchsia:#C2680A; --violet:#9A5B12; --line:rgba(194,104,10,.3); --blob-a:#FCE7C4; --blob-b:#F3DEBE; }
+        body[data-theme="dark"] {
+            --bg:#14121B; --ink:#ECE8F1; --ink-soft:#B6AFC6; --ink-faint:#7E7790;
+            --fuchsia:#EC4899; --violet:#A78BFA; --line:rgba(167,139,250,.42);
+            --node-bg:#241F32; --blob-a:#4C1D95; --blob-b:#831843;
+        }
+        body[data-theme="dark"] #topbar { background:rgba(28,24,40,.55); border-bottom-color:rgba(255,255,255,.08); }
+        body[data-theme="dark"] .seg, body[data-theme="dark"] .btn { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.1); }
+        body[data-theme="dark"] .menu { background:rgba(34,29,48,.96); border-color:rgba(255,255,255,.1); }
+        body[data-theme="dark"] #inspector, body[data-theme="dark"] #zoombar, body[data-theme="dark"] #sidebar, body[data-theme="dark"] .demo-panel, body[data-theme="dark"] .about-card { background:rgba(28,24,40,.92); border-color:rgba(255,255,255,.09); }
+        body[data-theme="dark"] #hint { background:rgba(28,24,40,.6); border-color:rgba(255,255,255,.08); }
+        body[data-theme="dark"] .field textarea, body[data-theme="dark"] .gate-grid button, body[data-theme="dark"] .val-toggle button, body[data-theme="dark"] .doc-item { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.1); }
+        body[data-theme="dark"] .ep { background:#241F32; }
+        body[data-theme="dark"] .btn.dark { background:var(--ink); color:#14121B; }
+        body[data-theme="dark"] .btn.dark:hover { background:var(--fuchsia); color:#fff; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .font-serif { font-family: 'Noto Serif SC', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .nebula-text {
+            background: linear-gradient(135deg, var(--fuchsia) 0%, var(--violet) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* ===== 星云氛围背景 ===== */
+        #ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: 0.45; }
+        .blob { position: absolute; border-radius: 50%; mix-blend-mode: multiply; filter: blur(110px); }
+        .blob-a { top: -20%; right: -10%; width: 820px; height: 820px; background: var(--blob-a); animation: drift1 65s linear infinite; }
+        .blob-b { bottom: -25%; left: -12%; width: 760px; height: 760px; background: var(--blob-b); animation: drift2 80s linear infinite; }
+        @keyframes drift1 { from { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.12); } to { transform: rotate(360deg) scale(1); } }
+        @keyframes drift2 { from { transform: rotate(0) scale(1); } 50% { transform: rotate(-180deg) scale(1.16); } to { transform: rotate(-360deg) scale(1); } }
+
+        /* ===== 顶栏 ===== */
+        #topbar {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 50;
+            display: flex; align-items: center; gap: 14px; padding: 12px 18px;
+            background: rgba(255,255,255,0.35); backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255,255,255,0.55);
+            -webkit-app-region: drag;
+        }
+        #topbar button, #topbar .seg, #topbar .menu { -webkit-app-region: no-drag; }
+        .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+        .brand .leaf { width: 22px; height: 22px; color: var(--fuchsia); }
+        .brand b { font-size: 17px; }
+        .brand small { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.25em; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+
+        .seg { display: flex; background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.8); border-radius: 999px; padding: 3px; gap: 2px; }
+        .seg button { border: 0; background: transparent; cursor: pointer; color: var(--ink-soft); font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 999px; transition: all .25s ease; font-family: inherit; }
+        .seg button.on { background: linear-gradient(135deg, var(--fuchsia), var(--violet)); color: #fff; box-shadow: 0 4px 14px -4px rgba(124,58,237,.5); }
+
+        .toolbar { display: flex; align-items: center; gap: 7px; margin-left: auto; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.7); color: var(--ink); font-size: 12px; font-weight: 600; font-family: inherit; padding: 8px 13px; border-radius: 12px; transition: all .2s ease; white-space: nowrap; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -8px rgba(0,0,0,.18); border-color: rgba(219,39,119,.3); }
+        .btn:active { transform: translateY(0); }
+        .btn svg { width: 15px; height: 15px; }
+        .btn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .btn.dark:hover { background: var(--fuchsia); border-color: var(--fuchsia); }
+
+        .menu-wrap { position: relative; }
+        .menu { position: absolute; top: calc(100% + 8px); right: 0; min-width: 184px; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; box-shadow: 0 18px 50px -18px rgba(0,0,0,.22); padding: 7px; z-index: 60; opacity: 0; transform: translateY(-8px) scale(.97); pointer-events: none; transition: all .2s cubic-bezier(.2,.9,.3,1); }
+        .menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        .menu button { width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--ink); padding: 9px 12px; border-radius: 10px; display: flex; align-items: center; gap: 9px; transition: background .15s; }
+        .menu button:hover { background: rgba(219,39,119,.08); color: var(--fuchsia); }
+        .menu button svg { width: 15px; height: 15px; opacity: .7; }
+        .menu .sep { height: 1px; background: rgba(0,0,0,.06); margin: 5px 6px; }
+
+        /* ===== 画布 ===== */
+        #stage { position: fixed; inset: 0; top: 0; z-index: 1; cursor: grab; touch-action: none; }
+        #stage.panning { cursor: grabbing; }
+        #stage.linking { cursor: crosshair; }
+        #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        #edges { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+        #edges .hit { stroke: transparent; stroke-width: 18; fill: none; pointer-events: stroke; cursor: pointer; }
+        #edges .line { fill: none; stroke: var(--line); stroke-width: 2; pointer-events: none; transition: stroke .25s, stroke-width .15s; }
+        #edges .line.true { stroke: rgba(16,185,129,.65); }
+        #edges .line.false { stroke: rgba(225,29,72,.5); }
+        #edges .line.sel { stroke: var(--fuchsia); stroke-width: 3.5; }
+        #edges .temp { fill: none; stroke: var(--violet); stroke-width: 2.5; stroke-dasharray: 6 6; pointer-events: none; opacity: .85; }
+
+        .node {
+            position: absolute; user-select: none; cursor: grab;
+            min-width: 84px; max-width: 240px; min-height: 40px;
+            background: var(--node-bg);
+            border: 1.5px solid rgba(124,58,237,.2); border-radius: 16px;
+            padding: 11px 15px; font-size: 14px; line-height: 1.45; color: var(--ink);
+            box-shadow: 0 6px 22px -12px rgba(0,0,0,.22);
+            transition: box-shadow .25s, border-color .25s, background .25s;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .node:active { cursor: grabbing; }
+        .node .txt { outline: none; word-break: break-word; width: 100%; }
+        .node.root { background: linear-gradient(135deg, var(--fuchsia), var(--violet)); color: #fff; border: 0; font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: 16px; box-shadow: 0 10px 30px -10px rgba(124,58,237,.55); }
+        .node.sel { border-color: var(--fuchsia); box-shadow: 0 0 0 3px rgba(219,39,119,.18), 0 10px 30px -10px rgba(219,39,119,.4); }
+        .node.t-true { border-color: var(--true); box-shadow: 0 0 0 2px rgba(16,185,129,.18), 0 8px 24px -12px rgba(16,185,129,.5); }
+        .node.t-false { border-color: var(--false); box-shadow: 0 0 0 2px rgba(225,29,72,.15), 0 8px 24px -12px rgba(225,29,72,.4); }
+
+        .node .gate-tag { display: none; align-self: flex-start; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: .12em; padding: 1px 7px; border-radius: 999px; margin-bottom: 5px; background: rgba(124,58,237,.1); color: var(--violet); text-transform: uppercase; }
+        .node.root .gate-tag { background: rgba(255,255,255,.22); color: #fff; }
+
+        /* 连线端口（拖拽连线 / 点击加子节点） */
+        .node .port { position: absolute; right: -11px; top: 50%; transform: translateY(-50%) scale(0); width: 22px; height: 22px; border-radius: 50%; border: 0; cursor: crosshair; background: linear-gradient(135deg, var(--fuchsia), var(--violet)); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; box-shadow: 0 3px 10px -2px rgba(124,58,237,.5); transition: transform .2s cubic-bezier(.2,1.4,.4,1); z-index: 5; }
+        .node:hover .port, .node.sel .port { transform: translateY(-50%) scale(1); }
+        /* 缩放手柄 */
+        .node .resize { position: absolute; right: 3px; bottom: 3px; width: 13px; height: 13px; cursor: nwse-resize; opacity: 0; transition: opacity .2s; z-index: 5; }
+        .node .resize::after { content: ''; position: absolute; right: 0; bottom: 0; width: 9px; height: 9px; border-right: 2px solid var(--violet); border-bottom: 2px solid var(--violet); border-bottom-right-radius: 4px; opacity: .55; }
+        .node:hover .resize, .node.sel .resize { opacity: 1; }
+        .node.root .resize::after { border-color: #fff; }
+
+        /* 连线编辑覆盖层 */
+        .ep { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2.5px solid var(--fuchsia); box-shadow: 0 2px 6px rgba(0,0,0,.2); cursor: grab; z-index: 7; transform: translate(-50%,-50%); }
+        .edge-del { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--false); color: #fff; border: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 3px 10px -2px rgba(225,29,72,.6); z-index: 7; transform: translate(-50%,-50%); transition: transform .15s; }
+        .edge-del:hover { transform: translate(-50%,-50%) scale(1.12); }
+        .edge-del svg { width: 12px; height: 12px; }
+
+        /* ===== 检查器侧栏 ===== */
+        #inspector { position: fixed; right: 16px; top: 74px; width: 256px; z-index: 40; background: rgba(255,255,255,0.78); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.8); border-radius: 22px; box-shadow: 0 18px 50px -20px rgba(0,0,0,.2); padding: 18px; transform: translateX(calc(100% + 24px)); opacity: 0; transition: transform .35s cubic-bezier(.2,.9,.3,1), opacity .3s; }
+        #inspector.show { transform: translateX(0); opacity: 1; }
+        #inspector h3 { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        #inspector h3 .meta { color: var(--violet); letter-spacing: .05em; }
+        .field { margin-bottom: 15px; }
+        .field label { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+        .field label a { color: var(--violet); cursor: pointer; font-weight: 600; text-decoration: none; }
+        .field label a:hover { text-decoration: underline; }
+        .field textarea { width: 100%; resize: vertical; min-height: 56px; font-family: inherit; font-size: 13px; background: rgba(255,255,255,.7); border: 1px solid rgba(0,0,0,.08); border-radius: 12px; padding: 10px; color: var(--ink); outline: none; transition: border-color .2s; }
+        .field textarea:focus { border-color: var(--fuchsia); }
+        .gate-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .gate-grid button, .val-toggle button { border: 1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.7); cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--ink-soft); padding: 8px 0; border-radius: 10px; transition: all .18s; }
+        .gate-grid button.on { background: linear-gradient(135deg, var(--fuchsia), var(--violet)); color: #fff; border-color: transparent; }
+        .gate-grid button:hover { border-color: var(--violet); }
+        .val-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .val-toggle button.on-t { background: var(--true); color: #fff; border-color: transparent; }
+        .val-toggle button.on-f { background: var(--false); color: #fff; border-color: transparent; }
+        .swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+        .swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.12); transition: transform .15s; }
+        .swatches button:hover { transform: scale(1.15); }
+        .swatches button.on { outline: 2px solid var(--ink); outline-offset: 2px; }
+        .danger { width: 100%; border: 1px solid rgba(225,29,72,.3); background: rgba(225,29,72,.06); color: var(--false); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; padding: 9px; border-radius: 12px; transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .danger:hover { background: var(--false); color: #fff; }
+        .danger svg { width: 14px; height: 14px; }
+
+        /* ===== 缩放控件 ===== */
+        #zoombar { position: fixed; left: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.78); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.8); border-radius: 14px; padding: 5px; box-shadow: 0 10px 30px -16px rgba(0,0,0,.2); }
+        #zoombar button { width: 32px; height: 32px; border: 0; background: transparent; cursor: pointer; border-radius: 9px; color: var(--ink-soft); font-size: 17px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+        #zoombar button:hover { background: rgba(219,39,119,.1); color: var(--fuchsia); }
+        #zoomval { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); min-width: 44px; text-align: center; }
+
+        #hint { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; font-size: 11px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; background: rgba(255,255,255,.55); backdrop-filter: blur(8px); padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.6); pointer-events: none; letter-spacing: .03em; max-width: 90vw; text-align: center; }
+        #toast { position: fixed; top: 78px; left: 50%; transform: translateX(-50%) translateY(-20px); z-index: 100; background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; padding: 11px 20px; border-radius: 14px; box-shadow: 0 12px 30px -10px rgba(0,0,0,.4); opacity: 0; transition: all .3s cubic-bezier(.2,.9,.3,1); pointer-events: none; display: flex; align-items: center; gap: 9px; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        #toast svg { width: 16px; height: 16px; color: #FBCFE8; }
+
+        /* ===== 图标按钮（菜单） ===== */
+        .iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; cursor: pointer; border: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.7); color: var(--ink); border-radius: 12px; transition: all .2s ease; }
+        .iconbtn:hover { color: var(--fuchsia); border-color: rgba(219,39,119,.3); }
+        .iconbtn svg { width: 18px; height: 18px; }
+        body[data-theme="dark"] .iconbtn { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.1); }
+
+        /* ===== 文档侧栏（聊天式历史） ===== */
+        #sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 276px; z-index: 70; display: flex; flex-direction: column;
+            background: rgba(255,255,255,0.82); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.7);
+            box-shadow: 12px 0 40px -20px rgba(0,0,0,.2); transform: translateX(-100%); transition: transform .35s cubic-bezier(.2,.9,.3,1); }
+        #sidebar.show { transform: translateX(0); }
+        .sb-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; }
+        .sb-head .title { display: flex; align-items: center; gap: 8px; font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: 16px; }
+        .sb-head .title svg { width: 18px; height: 18px; color: var(--fuchsia); }
+        .sb-new { display: inline-flex; align-items: center; gap: 5px; border: 0; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--fuchsia), var(--violet)); padding: 7px 12px; border-radius: 10px; transition: transform .15s; }
+        .sb-new:hover { transform: translateY(-1px); }
+        .sb-new svg { width: 13px; height: 13px; }
+        .sb-list { flex: 1; overflow-y: auto; padding: 4px 10px; }
+        .doc-item { position: relative; padding: 11px 13px; margin-bottom: 6px; border-radius: 13px; cursor: pointer; border: 1px solid transparent; background: rgba(255,255,255,.5); transition: all .15s; }
+        .doc-item:hover { border-color: rgba(219,39,119,.25); }
+        .doc-item.active { background: linear-gradient(135deg, rgba(219,39,119,.1), rgba(124,58,237,.1)); border-color: rgba(219,39,119,.35); }
+        .doc-item .dt { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 22px; }
+        .doc-item .dm { font-size: 10px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+        .doc-item .dx { position: absolute; right: 8px; top: 9px; width: 20px; height: 20px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-faint); cursor: pointer; opacity: 0; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+        .doc-item:hover .dx { opacity: 1; }
+        .doc-item .dx:hover { background: rgba(225,29,72,.12); color: var(--false); }
+        .doc-item .dx svg { width: 13px; height: 13px; }
+        .sb-foot { border-top: 1px solid rgba(0,0,0,.07); padding: 14px 16px; }
+        .sb-foot .lbl { font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
+        .theme-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+        .theme-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.15); transition: transform .15s; }
+        .theme-dot:hover { transform: scale(1.12); }
+        .theme-dot.on { outline: 2px solid var(--fuchsia); outline-offset: 2px; }
+        .sb-about { width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(0,0,0,.08); background: transparent; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); padding: 9px; border-radius: 11px; transition: all .15s; }
+        .sb-about:hover { color: var(--fuchsia); border-color: rgba(219,39,119,.3); }
+        .sb-about svg { width: 14px; height: 14px; }
+        .lang-sel { width: 100%; margin-bottom: 14px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink); background: rgba(255,255,255,.6); border: 1px solid rgba(0,0,0,.08); border-radius: 11px; padding: 9px 11px; cursor: pointer; outline: none; transition: border-color .15s; }
+        .lang-sel:focus { border-color: var(--fuchsia); }
+        body[data-theme="dark"] .lang-sel { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); }
+        body[data-theme="dark"] .lang-sel option { color: #222; }
+        body[data-theme="dark"] .doc-item { background: rgba(255,255,255,.04); }
+        body[data-theme="dark"] .sb-foot { border-top-color: rgba(255,255,255,.08); }
+
+        /* ===== 演示面板 ===== */
+        .demo-panel { position: absolute; top: calc(100% + 8px); right: 0; width: 248px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; box-shadow: 0 18px 50px -18px rgba(0,0,0,.25); padding: 14px; z-index: 60; opacity: 0; transform: translateY(-8px) scale(.97); pointer-events: none; transition: all .2s cubic-bezier(.2,.9,.3,1); }
+        .demo-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        .dp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+        .dp-row:last-child { margin-bottom: 0; }
+        .dp-play { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--fuchsia), var(--violet)); padding: 10px; border-radius: 11px; transition: transform .15s; }
+        .dp-play:hover { transform: translateY(-1px); }
+        .dp-play.stop { background: var(--false); }
+        .dp-play svg { width: 14px; height: 14px; }
+        .seg.small { padding: 2px; }
+        .seg.small button { font-size: 11px; padding: 5px 11px; }
+        .dp-row input[type=range] { flex: 1; accent-color: var(--fuchsia); height: 4px; }
+        .dp-row b { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--violet); min-width: 46px; text-align: right; }
+        .dp-colors { display: flex; gap: 6px; }
+        .dp-colors button { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.2); transition: transform .15s; }
+        .dp-colors button:hover { transform: scale(1.15); }
+        .dp-colors button.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+        /* ===== 关于弹窗 ===== */
+        #aboutMask { position: fixed; inset: 0; z-index: 200; background: rgba(20,18,27,.45); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+        #aboutMask.show { opacity: 1; pointer-events: auto; }
+        .about-card { width: 100%; max-width: 440px; max-height: 88vh; overflow-y: auto; background: rgba(255,255,255,0.97); border: 1px solid rgba(255,255,255,0.8); border-radius: 24px; box-shadow: 0 30px 80px -24px rgba(0,0,0,.5); padding: 30px; transform: scale(.94); transition: transform .3s cubic-bezier(.2,.9,.3,1); position: relative; }
+        #aboutMask.show .about-card { transform: scale(1); }
+        .about-card .ac-close { position: absolute; right: 16px; top: 16px; width: 30px; height: 30px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .about-card .ac-close:hover { background: rgba(0,0,0,.06); color: var(--ink); }
+        .about-card .ac-logo { width: 54px; height: 54px; border-radius: 16px; background: linear-gradient(135deg, var(--fuchsia), var(--violet)); display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 16px; box-shadow: 0 10px 24px -8px rgba(124,58,237,.5); }
+        .about-card .ac-logo svg { width: 28px; height: 28px; }
+        .about-card h2 { font-family: 'Noto Serif SC', serif; font-size: 24px; margin-bottom: 4px; }
+        .about-card .ac-ver { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); letter-spacing: .1em; margin-bottom: 16px; }
+        .about-card p { font-size: 13.5px; line-height: 1.7; color: var(--ink-soft); margin-bottom: 14px; }
+        .about-card ul { list-style: none; margin-bottom: 16px; }
+        .about-card li { font-size: 13px; color: var(--ink-soft); padding: 5px 0 5px 22px; position: relative; }
+        .about-card li::before { content: '✦'; position: absolute; left: 0; color: var(--fuchsia); }
+        .about-card .ac-meta { font-size: 11.5px; color: var(--ink-faint); border-top: 1px solid rgba(0,0,0,.08); padding-top: 14px; line-height: 1.8; }
+        .about-card .ac-meta a { color: var(--violet); text-decoration: none; font-weight: 600; }
+        .about-card .ac-meta a:hover { text-decoration: underline; }
+        body[data-theme="dark"] .about-card .ac-meta { border-top-color: rgba(255,255,255,.1); }
+
+        /* ===== 演示光点层 ===== */
+        #fx { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+        @keyframes nodePulse { 0% { box-shadow: 0 0 0 0 rgba(124,58,237,.55), 0 6px 22px -12px rgba(0,0,0,.22); } 70% { box-shadow: 0 0 0 14px rgba(124,58,237,0), 0 6px 22px -12px rgba(0,0,0,.22); } 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0), 0 6px 22px -12px rgba(0,0,0,.22); } }
+        .node.pulse { animation: nodePulse .6s ease-out; }
+
+        @media (max-width: 720px) {
+            #ambient { display: none; }
+            .brand small { display: none; }
+            #inspector { left: 12px; right: 12px; width: auto; top: auto; bottom: 64px; transform: translateY(calc(100% + 80px)); }
+            #inspector.show { transform: translateY(0); }
+            .toolbar .label { display: none; }
+            #sidebar { width: 84vw; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ambient"><div class="blob blob-a"></div><div class="blob blob-b"></div></div>
+
+    <header id="topbar">
+        <button class="iconbtn" id="menuBtn" title="文档 / 历史" data-i18n-title="menu_title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div class="brand">
+            <svg class="leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            <div style="display:flex;flex-direction:column;line-height:1.1">
+                <b class="font-serif">脉络 <span class="nebula-text">Mindscape</span></b>
+                <small>thought · logic atlas</small>
+            </div>
+        </div>
+
+        <div class="seg" id="modeSeg">
+            <button data-mode="mind" class="on" data-i18n="mode_mind">思维导图</button>
+            <button data-mode="logic" data-i18n="mode_logic">逻辑图</button>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn" id="addBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="label" data-i18n="add">凭空建节点</span></button>
+
+            <div class="menu-wrap">
+                <button class="btn" id="layoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg><span class="label" id="layoutLabel">横向</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="width:11px;height:11px;opacity:.5"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="menu" id="layoutMenu">
+                    <button data-dir="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="9" width="6" height="6" rx="1"/><rect x="16" y="3" width="6" height="6" rx="1"/><rect x="16" y="15" width="6" height="6" rx="1"/><path d="M8 12h4M12 6v12M12 6h4M12 18h4"/></svg><span data-i18n="lay_h">横向展开</span></button>
+                    <button data-dir="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="3" y="16" width="6" height="6" rx="1"/><rect x="15" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg><span data-i18n="lay_v">竖向展开</span></button>
+                    <button data-dir="auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><path d="M21 3v6h-6"/></svg><span data-i18n="lay_auto">自适应</span></button>
+                </div>
+            </div>
+
+            <button class="btn" id="fitBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg><span class="label" data-i18n="fit">居中</span></button>
+
+            <div class="menu-wrap">
+                <button class="btn" id="demoBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 3l14 9-14 9V3z"/></svg><span class="label" data-i18n="demo">演示</span></button>
+                <div class="demo-panel" id="demoPanel">
+                    <div class="dp-row"><button class="dp-play" id="demoToggle"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M5 3l14 9-14 9V3z"/></svg><span data-i18n="demo_start">开始演示</span></button></div>
+                    <div class="dp-row"><span data-i18n="demo_way">方式</span><div class="seg small" id="demoModeSeg"><button data-dm="loop" class="on" data-i18n="demo_loop">循环</button><button data-dm="single" data-i18n="demo_single">单次</button></div></div>
+                    <div class="dp-row" id="freqRow"><span data-i18n="demo_freq">脉冲频率</span><input type="range" id="demoFreq" min="400" max="4000" step="100"><b id="freqVal"></b></div>
+                    <div class="dp-row"><span data-i18n="demo_speed">速度</span><input type="range" id="demoSpeed" min="0.3" max="3" step="0.1"><b id="speedVal"></b></div>
+                    <div class="dp-row"><span data-i18n="demo_color">颜色</span><div class="dp-colors" id="demoColors"></div></div>
+                </div>
+            </div>
+
+            <div class="menu-wrap">
+                <button class="btn dark" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="label" data-i18n="export">导出</span></button>
+                <div class="menu" id="exportMenu">
+                    <button data-act="md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18v14H3zM7 15V9l3 3 3-3v6M17 9v6M14 12l3 3 3-3"/></svg><span data-i18n="exp_md">Markdown (.md)</span></button>
+                    <button data-act="png"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><span data-i18n="exp_png">图片 (.png)</span></button>
+                    <button data-act="txt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span data-i18n="exp_txt">纯文本 (.txt)</span></button>
+                    <div class="sep"></div>
+                    <button data-act="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 9l5-5 5 5M12 4v12"/></svg><span data-i18n="exp_import">导入 Markdown / 工程</span></button>
+                    <button data-act="json"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="exp_json">保存工程 (.json)</span></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="stage">
+        <div id="world">
+            <svg id="edges"></svg>
+            <svg id="fx"></svg>
+        </div>
+    </div>
+
+    <aside id="sidebar">
+        <div class="sb-head">
+            <span class="title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg><span data-i18n="sb_docs">文档</span></span>
+            <button class="sb-new" id="newDocBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="sb_new">新建</span></button>
+        </div>
+        <div class="sb-list" id="docList"></div>
+        <div class="sb-foot">
+            <div class="lbl" data-i18n="sb_theme">颜色主题</div>
+            <div class="theme-row" id="themeRow"></div>
+            <div class="lbl" data-i18n="sb_lang">语言</div>
+            <select id="langSel" class="lang-sel"></select>
+            <button class="sb-about" id="aboutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span data-i18n="sb_about">关于 Mindscape</span></button>
+        </div>
+    </aside>
+
+    <div id="aboutMask">
+        <div class="about-card">
+            <button class="ac-close" id="aboutClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <div class="ac-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></div>
+            <h2 class="font-serif">脉络 <span class="nebula-text">Mindscape</span></h2>
+            <div class="ac-ver" data-i18n="about_ver">VERSION 1.0 · thought · logic atlas</div>
+            <p data-i18n="about_desc">一个零依赖、可离线运行的思维导图 / 逻辑（布尔）图可视化工具。底层是任意有向图模型，既能画整齐的树状导图，也能表达多对多、共享与递归成环的逻辑网络。</p>
+            <ul>
+                <li data-i18n="about_f1">思维导图 / 逻辑图双模式，逻辑门实时求值着色</li>
+                <li data-i18n="about_f2">凭空建节点、自由连线、删除 / 重连、节点尺寸自定义</li>
+                <li data-i18n="about_f3">横向 / 竖向 / 自适应自动布局</li>
+                <li data-i18n="about_f4">沿连线流动的光点演示（脉冲循环 / 单次）</li>
+                <li data-i18n="about_f5">聊天式文档历史，自动保存 / 加载</li>
+                <li data-i18n="about_f6">多套颜色主题；导出 Markdown / PNG / TXT / 工程 JSON</li>
+            </ul>
+            <div class="ac-meta">
+                <span data-i18n="about_tech">技术：原生 HTML/CSS/JavaScript（零运行时依赖）+ 可选 Electron 桌面封装。</span><br>
+                <span data-i18n="about_design">设计语言取自 Leaf Hub。许可证 MIT。</span><br>
+                <span data-i18n="about_author">作者：一位独立全栈开发者（Leaf Hub）。</span><br>
+                <a id="aboutSite" href="https://pingyi.me" target="_blank" rel="noreferrer" data-i18n="about_site">作者 · pingyi.me</a> · <a id="aboutRepo" href="#" target="_blank" rel="noreferrer" data-i18n="about_repo">在 GitHub 上查看</a>
+            </div>
+        </div>
+    </div>
+
+    <aside id="inspector">
+        <h3><span data-i18n="insp_title">节点属性</span> <span class="meta" id="insMeta"></span></h3>
+        <div class="field">
+            <label data-i18n="insp_text">文本</label>
+            <textarea id="insText" placeholder="输入节点内容…" data-i18n-ph="insp_text_ph"></textarea>
+        </div>
+        <div class="field" id="gateField">
+            <label data-i18n="insp_gate">逻辑门</label>
+            <div class="gate-grid" id="gateGrid">
+                <button data-gate="none" data-i18n="gate_none">无</button>
+                <button data-gate="AND">AND</button>
+                <button data-gate="OR">OR</button>
+                <button data-gate="NOT">NOT</button>
+                <button data-gate="VAR" data-i18n="gate_var">变量</button>
+                <button data-gate="XOR">XOR</button>
+            </div>
+        </div>
+        <div class="field" id="valField">
+            <label data-i18n="insp_val">取值（变量）</label>
+            <div class="val-toggle" id="valToggle">
+                <button data-val="true">TRUE</button>
+                <button data-val="false">FALSE</button>
+            </div>
+        </div>
+        <div class="field">
+            <label><span data-i18n="insp_color">颜色</span> <a id="resetSize" data-i18n="insp_reset">重置尺寸</a></label>
+            <div class="swatches" id="swatches"></div>
+        </div>
+        <button class="danger" id="delBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="insp_del">删除节点</span></button>
+    </aside>
+
+    <div id="zoombar">
+        <button id="zoomOut">−</button>
+        <span id="zoomval">100%</span>
+        <button id="zoomIn">+</button>
+    </div>
+
+    <div id="hint" data-i18n="hint">双击空白建节点 · 拖节点端口连线（松手到空白则新建并连接）· 点连线可删/重连 · 拖右下角改尺寸</div>
+    <div id="toast"></div>
+
+    <input type="file" id="fileInput" accept=".md,.txt,.json,text/markdown,text/plain,application/json" style="display:none">
+
+    <script>
+    (() => {
+        'use strict';
+
+        const PALETTE = ['#DB2777', '#7C3AED', '#2563EB', '#0891B2', '#059669', '#D97706', '#DC2626', '#475569'];
+        const DEMO_COLORS = ['#7C3AED', '#DB2777', '#2563EB', '#0EA371', '#F59E0B', '#EF4444'];
+        let demoSettings = { mode: 'loop', freq: 1600, speed: 1, color: '#7C3AED' };
+
+        // ============ 多语言 i18n ============
+        const LANGS = [['zh-CN', '简体中文'], ['zh-TW', '繁體中文'], ['en', 'English'], ['ja', '日本語'], ['ko', '한국어'], ['fr', 'Français'], ['de', 'Deutsch'], ['es', 'Español'], ['pt', 'Português'], ['ru', 'Русский'], ['ar', 'العربية'], ['hi', 'हिन्दी']];
+        const I18N = {
+            'zh-CN': { mode_mind:'思维导图', mode_logic:'逻辑图', add:'凭空建节点', fit:'居中', demo:'演示', export:'导出', lay_h:'横向展开', lay_v:'竖向展开', lay_auto:'自适应', name_h:'横向', name_v:'竖向', auto_suffix:'·自适应', exp_md:'Markdown (.md)', exp_png:'图片 (.png)', exp_txt:'纯文本 (.txt)', exp_import:'导入 Markdown / 工程', exp_json:'保存工程 (.json)', demo_start:'开始演示', demo_stop:'停止演示', demo_way:'方式', demo_loop:'循环', demo_single:'单次', demo_freq:'脉冲频率', demo_speed:'速度', demo_color:'颜色', insp_title:'节点属性', insp_text:'文本', insp_text_ph:'输入节点内容…', insp_gate:'逻辑门', gate_none:'无', gate_var:'变量', insp_val:'取值（变量）', insp_color:'颜色', insp_reset:'重置尺寸', insp_del:'删除节点', sb_docs:'文档', sb_new:'新建', sb_theme:'颜色主题', sb_lang:'语言', sb_about:'关于 Mindscape', sb_empty:'暂无文档', doc_nodes:'节点', t_just:'刚刚', t_min:'分钟前', t_hour:'小时前', del:'删除', menu_title:'文档 / 历史', port_title:'拖拽连线，点击加子节点', resize_title:'拖拽改变尺寸', hint:'双击空白建节点 · 拖节点端口连线（松手到空白则新建并连接）· 点连线可删/重连 · 拖右下角改尺寸', about_ver:'版本 1.0 · thought · logic atlas', about_desc:'一个零依赖、可离线运行的思维导图 / 逻辑（布尔）图可视化工具。底层是任意有向图模型，既能画整齐的树状导图，也能表达多对多、共享与递归成环的逻辑网络。', about_f1:'思维导图 / 逻辑图双模式，逻辑门实时求值着色', about_f2:'凭空建节点、自由连线、删除 / 重连、节点尺寸自定义', about_f3:'横向 / 竖向 / 自适应自动布局', about_f4:'沿连线流动的光点演示（循环 / 单次）', about_f5:'聊天式文档历史，自动保存 / 加载', about_f6:'多套颜色主题；导出 Markdown / PNG / TXT / 工程 JSON', about_tech:'技术：原生 HTML/CSS/JavaScript（零运行时依赖）+ 可选 Electron 桌面封装。', about_design:'设计语言取自 Leaf Hub。许可证 MIT。', about_author:'作者：一位独立全栈开发者（Leaf Hub）。', about_site:'作者 · pingyi.me', about_repo:'在 GitHub 上查看', theme_leaf:'脉络', theme_rose:'蔷薇', theme_mint:'薄荷', theme_sky:'青空', theme_sand:'暖沙', theme_dark:'暗夜', t_edge_exists:'连线已存在', t_edge_del:'已删除连线', t_reconn:'已重连', t_linked:'已连线', t_selfloop:'已添加自环（递归）', t_node_del:'已删除节点', t_size_reset:'尺寸已重置', t_md:'已导出 Markdown', t_txt:'已导出 TXT', t_json_saved:'已保存工程', t_png:'已导出 PNG', t_empty:'无内容', t_import_ok:'导入成功 · {n} 个节点', t_import_none:'未找到可导入内容', t_loaded:'工程已载入', t_json_err:'JSON 解析失败', t_storage_full:'本地存储已满', t_no_nodes:'没有节点可演示', default_node:'新节点', unnamed:'未命名', import_root:'导入内容', new_doc:'新文档' },
+            'zh-TW': { mode_mind:'心智圖', mode_logic:'邏輯圖', add:'憑空建節點', fit:'置中', demo:'演示', export:'匯出', lay_h:'橫向展開', lay_v:'縱向展開', lay_auto:'自適應', name_h:'橫向', name_v:'縱向', auto_suffix:'·自適應', exp_md:'Markdown (.md)', exp_png:'圖片 (.png)', exp_txt:'純文字 (.txt)', exp_import:'匯入 Markdown / 專案', exp_json:'儲存專案 (.json)', demo_start:'開始演示', demo_stop:'停止演示', demo_way:'方式', demo_loop:'循環', demo_single:'單次', demo_freq:'脈衝頻率', demo_speed:'速度', demo_color:'顏色', insp_title:'節點屬性', insp_text:'文字', insp_text_ph:'輸入節點內容…', insp_gate:'邏輯閘', gate_none:'無', gate_var:'變數', insp_val:'取值（變數）', insp_color:'顏色', insp_reset:'重置尺寸', insp_del:'刪除節點', sb_docs:'文件', sb_new:'新增', sb_theme:'顏色主題', sb_lang:'語言', sb_about:'關於 Mindscape', sb_empty:'尚無文件', doc_nodes:'節點', t_just:'剛剛', t_min:'分鐘前', t_hour:'小時前', del:'刪除', menu_title:'文件 / 歷史', port_title:'拖曳連線，點擊加子節點', resize_title:'拖曳改變尺寸', hint:'雙擊空白建節點 · 拖節點埠連線（鬆手到空白則新建並連接）· 點連線可刪/重連 · 拖右下角改尺寸', about_ver:'版本 1.0 · thought · logic atlas', about_desc:'一個零相依、可離線執行的心智圖 / 邏輯（布林）圖視覺化工具。底層為任意有向圖模型，既能畫整齊的樹狀導圖，也能表達多對多、共享與遞迴成環的邏輯網路。', about_f1:'心智圖 / 邏輯圖雙模式，邏輯閘即時求值上色', about_f2:'憑空建節點、自由連線、刪除 / 重連、節點尺寸自訂', about_f3:'橫向 / 縱向 / 自適應自動佈局', about_f4:'沿連線流動的光點演示（循環 / 單次）', about_f5:'聊天式文件歷史，自動儲存 / 載入', about_f6:'多套顏色主題；匯出 Markdown / PNG / TXT / 專案 JSON', about_tech:'技術：原生 HTML/CSS/JavaScript（零執行階段相依）+ 可選 Electron 桌面封裝。', about_design:'設計語言取自 Leaf Hub。授權 MIT。', about_author:'作者：一位獨立全端開發者（Leaf Hub）。', about_site:'作者 · pingyi.me', about_repo:'在 GitHub 上檢視', theme_leaf:'脈絡', theme_rose:'薔薇', theme_mint:'薄荷', theme_sky:'青空', theme_sand:'暖沙', theme_dark:'暗夜', t_edge_exists:'連線已存在', t_edge_del:'已刪除連線', t_reconn:'已重連', t_linked:'已連線', t_selfloop:'已新增自環（遞迴）', t_node_del:'已刪除節點', t_size_reset:'尺寸已重置', t_md:'已匯出 Markdown', t_txt:'已匯出 TXT', t_json_saved:'已儲存專案', t_png:'已匯出 PNG', t_empty:'無內容', t_import_ok:'匯入成功 · {n} 個節點', t_import_none:'找不到可匯入內容', t_loaded:'專案已載入', t_json_err:'JSON 解析失敗', t_storage_full:'本機儲存已滿', t_no_nodes:'沒有節點可演示', default_node:'新節點', unnamed:'未命名', import_root:'匯入內容', new_doc:'新文件' },
+            'en': { mode_mind:'Mind Map', mode_logic:'Logic', add:'New node', fit:'Fit', demo:'Demo', export:'Export', lay_h:'Horizontal', lay_v:'Vertical', lay_auto:'Adaptive', name_h:'Horizontal', name_v:'Vertical', auto_suffix:' · auto', exp_md:'Markdown (.md)', exp_png:'Image (.png)', exp_txt:'Plain text (.txt)', exp_import:'Import Markdown / project', exp_json:'Save project (.json)', demo_start:'Start demo', demo_stop:'Stop demo', demo_way:'Mode', demo_loop:'Loop', demo_single:'Once', demo_freq:'Pulse rate', demo_speed:'Speed', demo_color:'Color', insp_title:'Node', insp_text:'Text', insp_text_ph:'Enter node text…', insp_gate:'Logic gate', gate_none:'None', gate_var:'Var', insp_val:'Value (variable)', insp_color:'Color', insp_reset:'Reset size', insp_del:'Delete node', sb_docs:'Documents', sb_new:'New', sb_theme:'Color theme', sb_lang:'Language', sb_about:'About Mindscape', sb_empty:'No documents yet', doc_nodes:'nodes', t_just:'just now', t_min:'min ago', t_hour:'h ago', del:'Delete', menu_title:'Documents / history', port_title:'Drag to connect, click to add child', resize_title:'Drag to resize', hint:'Double-click canvas to add a node · drag a node port to connect (drop on empty to create & link) · click an edge to delete/reconnect · drag the corner to resize', about_ver:'VERSION 1.0 · thought · logic atlas', about_desc:'A zero-dependency, offline-ready tool for visualizing mind maps and boolean-logic graphs. Built on an arbitrary directed-graph model — draw tidy trees or express many-to-many, shared and recursive logic networks.', about_f1:'Mind-map / logic dual mode with live gate evaluation', about_f2:'Free nodes, arbitrary edges, delete/reconnect, resizable nodes', about_f3:'Horizontal / vertical / adaptive auto-layout', about_f4:'Light-pulse demo flowing along edges (loop / once)', about_f5:'Chat-style document history with auto-save', about_f6:'Multiple color themes; export Markdown / PNG / TXT / JSON', about_tech:'Tech: vanilla HTML/CSS/JavaScript (zero runtime deps) + optional Electron desktop wrapper.', about_design:'Design language from Leaf Hub. Licensed under MIT.', about_author:'By a solo full-stack developer (Leaf Hub).', about_site:'Author · pingyi.me', about_repo:'View on GitHub', theme_leaf:'Leaf', theme_rose:'Rose', theme_mint:'Mint', theme_sky:'Sky', theme_sand:'Sand', theme_dark:'Dark', t_edge_exists:'Edge already exists', t_edge_del:'Edge deleted', t_reconn:'Reconnected', t_linked:'Connected', t_selfloop:'Self-loop added (recursive)', t_node_del:'Node deleted', t_size_reset:'Size reset', t_md:'Markdown exported', t_txt:'TXT exported', t_json_saved:'Project saved', t_png:'PNG exported', t_empty:'Nothing to export', t_import_ok:'Imported · {n} nodes', t_import_none:'Nothing to import', t_loaded:'Project loaded', t_json_err:'JSON parse failed', t_storage_full:'Local storage full', t_no_nodes:'No nodes to demo', default_node:'New node', unnamed:'Untitled', import_root:'Imported', new_doc:'New document' },
+            'ja': { mode_mind:'マインドマップ', mode_logic:'論理図', add:'ノード追加', fit:'中央', demo:'デモ', export:'書き出し', lay_h:'横方向', lay_v:'縦方向', lay_auto:'自動', name_h:'横', name_v:'縦', auto_suffix:'·自動', exp_md:'Markdown (.md)', exp_png:'画像 (.png)', exp_txt:'テキスト (.txt)', exp_import:'Markdown / プロジェクトを読込', exp_json:'プロジェクト保存 (.json)', demo_start:'デモ開始', demo_stop:'デモ停止', demo_way:'方式', demo_loop:'ループ', demo_single:'1回', demo_freq:'パルス間隔', demo_speed:'速度', demo_color:'色', insp_title:'ノード', insp_text:'テキスト', insp_text_ph:'内容を入力…', insp_gate:'論理ゲート', gate_none:'なし', gate_var:'変数', insp_val:'値（変数）', insp_color:'色', insp_reset:'サイズ初期化', insp_del:'ノード削除', sb_docs:'ドキュメント', sb_new:'新規', sb_theme:'カラーテーマ', sb_lang:'言語', sb_about:'Mindscape について', sb_empty:'ドキュメントなし', doc_nodes:'ノード', t_just:'たった今', t_min:'分前', t_hour:'時間前', del:'削除', menu_title:'ドキュメント / 履歴', port_title:'ドラッグで接続、クリックで子ノード', resize_title:'ドラッグでサイズ変更', hint:'空白をダブルクリックでノード作成 · ポートをドラッグで接続（空白で離すと新規作成）· 線をクリックで削除/再接続 · 右下でサイズ変更', about_ver:'バージョン 1.0 · thought · logic atlas', about_desc:'依存ゼロ・オフライン対応のマインドマップ／論理（ブール）図ツール。任意の有向グラフモデルを基盤に、整然とした木構造から多対多・共有・再帰的なネットワークまで表現できます。', about_f1:'マインドマップ／論理図の2モード、ゲートを即時評価・着色', about_f2:'自由なノード作成・接続・削除/再接続・サイズ変更', about_f3:'横／縦／自動レイアウト', about_f4:'線に沿って流れる光のデモ（ループ／1回）', about_f5:'チャット風のドキュメント履歴・自動保存', about_f6:'複数のカラーテーマ、Markdown / PNG / TXT / JSON 書き出し', about_tech:'技術：素の HTML/CSS/JavaScript（依存なし）+ 任意で Electron デスクトップ化。', about_design:'デザインは Leaf Hub 由来。ライセンス MIT。', about_author:'作者：個人のフルスタック開発者（Leaf Hub）。', about_site:'作者 · pingyi.me', about_repo:'GitHub で見る', theme_leaf:'リーフ', theme_rose:'ローズ', theme_mint:'ミント', theme_sky:'スカイ', theme_sand:'サンド', theme_dark:'ダーク', t_edge_exists:'接続は既に存在します', t_edge_del:'接続を削除しました', t_reconn:'再接続しました', t_linked:'接続しました', t_selfloop:'自己ループを追加（再帰）', t_node_del:'ノードを削除しました', t_size_reset:'サイズを初期化', t_md:'Markdown を書き出しました', t_txt:'TXT を書き出しました', t_json_saved:'プロジェクトを保存しました', t_png:'PNG を書き出しました', t_empty:'内容がありません', t_import_ok:'読込完了 · {n} ノード', t_import_none:'読込内容がありません', t_loaded:'プロジェクトを読込みました', t_json_err:'JSON 解析に失敗', t_storage_full:'ローカル保存が満杯です', t_no_nodes:'演示するノードがありません', default_node:'新規ノード', unnamed:'無題', import_root:'読込内容', new_doc:'新規ドキュメント' },
+            'ko': { mode_mind:'마인드맵', mode_logic:'논리도', add:'노드 추가', fit:'가운데', demo:'데모', export:'내보내기', lay_h:'가로', lay_v:'세로', lay_auto:'자동', name_h:'가로', name_v:'세로', auto_suffix:'·자동', exp_md:'Markdown (.md)', exp_png:'이미지 (.png)', exp_txt:'텍스트 (.txt)', exp_import:'Markdown / 프로젝트 가져오기', exp_json:'프로젝트 저장 (.json)', demo_start:'데모 시작', demo_stop:'데모 정지', demo_way:'방식', demo_loop:'반복', demo_single:'1회', demo_freq:'펄스 주기', demo_speed:'속도', demo_color:'색상', insp_title:'노드', insp_text:'텍스트', insp_text_ph:'노드 내용 입력…', insp_gate:'논리 게이트', gate_none:'없음', gate_var:'변수', insp_val:'값(변수)', insp_color:'색상', insp_reset:'크기 초기화', insp_del:'노드 삭제', sb_docs:'문서', sb_new:'새로', sb_theme:'색상 테마', sb_lang:'언어', sb_about:'Mindscape 정보', sb_empty:'문서 없음', doc_nodes:'노드', t_just:'방금', t_min:'분 전', t_hour:'시간 전', del:'삭제', menu_title:'문서 / 기록', port_title:'드래그로 연결, 클릭으로 자식 추가', resize_title:'드래그로 크기 조절', hint:'빈 곳 더블클릭으로 노드 생성 · 포트를 드래그해 연결(빈 곳에 놓으면 새로 생성·연결) · 선 클릭으로 삭제/재연결 · 모서리 드래그로 크기 조절', about_ver:'버전 1.0 · thought · logic atlas', about_desc:'의존성 없는 오프라인 지원 마인드맵 / 논리(불리언) 그래프 도구. 임의의 방향 그래프 모델을 기반으로 정돈된 트리부터 다대다·공유·재귀 네트워크까지 표현합니다.', about_f1:'마인드맵 / 논리 2모드, 게이트 실시간 평가·채색', about_f2:'자유 노드 생성·연결·삭제/재연결·크기 조절', about_f3:'가로 / 세로 / 자동 레이아웃', about_f4:'선을 따라 흐르는 빛 데모(반복 / 1회)', about_f5:'채팅형 문서 기록, 자동 저장', about_f6:'여러 색상 테마, Markdown / PNG / TXT / JSON 내보내기', about_tech:'기술: 순수 HTML/CSS/JavaScript(런타임 의존성 없음) + 선택적 Electron 데스크톱.', about_design:'디자인 언어는 Leaf Hub 기반. MIT 라이선스.', about_author:'제작: 1인 풀스택 개발자(Leaf Hub).', about_site:'제작자 · pingyi.me', about_repo:'GitHub에서 보기', theme_leaf:'리프', theme_rose:'로즈', theme_mint:'민트', theme_sky:'스카이', theme_sand:'샌드', theme_dark:'다크', t_edge_exists:'이미 연결됨', t_edge_del:'연결 삭제됨', t_reconn:'재연결됨', t_linked:'연결됨', t_selfloop:'자기 루프 추가(재귀)', t_node_del:'노드 삭제됨', t_size_reset:'크기 초기화', t_md:'Markdown 내보냄', t_txt:'TXT 내보냄', t_json_saved:'프로젝트 저장됨', t_png:'PNG 내보냄', t_empty:'내용 없음', t_import_ok:'가져오기 완료 · {n} 노드', t_import_none:'가져올 내용 없음', t_loaded:'프로젝트 불러옴', t_json_err:'JSON 파싱 실패', t_storage_full:'로컬 저장 공간 가득참', t_no_nodes:'데모할 노드 없음', default_node:'새 노드', unnamed:'제목 없음', import_root:'가져온 내용', new_doc:'새 문서' },
+            'fr': { mode_mind:'Carte mentale', mode_logic:'Logique', add:'Nouveau nœud', fit:'Ajuster', demo:'Démo', export:'Exporter', lay_h:'Horizontal', lay_v:'Vertical', lay_auto:'Adaptatif', name_h:'Horizontal', name_v:'Vertical', auto_suffix:' · auto', exp_md:'Markdown (.md)', exp_png:'Image (.png)', exp_txt:'Texte (.txt)', exp_import:'Importer Markdown / projet', exp_json:'Enregistrer le projet (.json)', demo_start:'Démarrer', demo_stop:'Arrêter', demo_way:'Mode', demo_loop:'Boucle', demo_single:'Une fois', demo_freq:'Fréquence', demo_speed:'Vitesse', demo_color:'Couleur', insp_title:'Nœud', insp_text:'Texte', insp_text_ph:'Saisir le contenu…', insp_gate:'Porte logique', gate_none:'Aucune', gate_var:'Var', insp_val:'Valeur (variable)', insp_color:'Couleur', insp_reset:'Réinit. taille', insp_del:'Supprimer le nœud', sb_docs:'Documents', sb_new:'Nouveau', sb_theme:'Thème de couleur', sb_lang:'Langue', sb_about:'À propos de Mindscape', sb_empty:'Aucun document', doc_nodes:'nœuds', t_just:'à l’instant', t_min:'min', t_hour:'h', del:'Supprimer', menu_title:'Documents / historique', port_title:'Glisser pour relier, cliquer pour un enfant', resize_title:'Glisser pour redimensionner', hint:'Double-clic pour créer un nœud · glisser le port pour relier (lâcher dans le vide crée et relie) · cliquer une arête pour supprimer/reconnecter · coin pour redimensionner', about_ver:'VERSION 1.0 · thought · logic atlas', about_desc:'Un outil sans dépendances et hors ligne pour visualiser des cartes mentales et des graphes de logique booléenne. Basé sur un modèle de graphe orienté arbitraire — arbres nets ou réseaux logiques multi-à-multi, partagés et récursifs.', about_f1:'Double mode carte mentale / logique, évaluation en direct', about_f2:'Nœuds libres, arêtes libres, suppression/reconnexion, taille', about_f3:'Disposition horizontale / verticale / adaptative', about_f4:'Démo de points lumineux le long des arêtes (boucle / une fois)', about_f5:'Historique de documents façon chat, sauvegarde auto', about_f6:'Plusieurs thèmes ; export Markdown / PNG / TXT / JSON', about_tech:'Tech : HTML/CSS/JavaScript natif (zéro dépendance) + Electron en option.', about_design:'Langage visuel issu de Leaf Hub. Licence MIT.', about_author:'Par un développeur full-stack indépendant (Leaf Hub).', about_site:'Auteur · pingyi.me', about_repo:'Voir sur GitHub', theme_leaf:'Feuille', theme_rose:'Rose', theme_mint:'Menthe', theme_sky:'Ciel', theme_sand:'Sable', theme_dark:'Sombre', t_edge_exists:'Arête déjà existante', t_edge_del:'Arête supprimée', t_reconn:'Reconnectée', t_linked:'Reliée', t_selfloop:'Boucle ajoutée (récursif)', t_node_del:'Nœud supprimé', t_size_reset:'Taille réinitialisée', t_md:'Markdown exporté', t_txt:'TXT exporté', t_json_saved:'Projet enregistré', t_png:'PNG exporté', t_empty:'Rien à exporter', t_import_ok:'Importé · {n} nœuds', t_import_none:'Rien à importer', t_loaded:'Projet chargé', t_json_err:'Échec d’analyse JSON', t_storage_full:'Stockage local plein', t_no_nodes:'Aucun nœud à animer', default_node:'Nouveau nœud', unnamed:'Sans titre', import_root:'Importé', new_doc:'Nouveau document' },
+            'de': { mode_mind:'Mindmap', mode_logic:'Logik', add:'Neuer Knoten', fit:'Zentrieren', demo:'Demo', export:'Export', lay_h:'Horizontal', lay_v:'Vertikal', lay_auto:'Adaptiv', name_h:'Horizontal', name_v:'Vertikal', auto_suffix:' · auto', exp_md:'Markdown (.md)', exp_png:'Bild (.png)', exp_txt:'Text (.txt)', exp_import:'Markdown / Projekt importieren', exp_json:'Projekt speichern (.json)', demo_start:'Demo starten', demo_stop:'Demo stoppen', demo_way:'Modus', demo_loop:'Schleife', demo_single:'Einmal', demo_freq:'Pulsrate', demo_speed:'Tempo', demo_color:'Farbe', insp_title:'Knoten', insp_text:'Text', insp_text_ph:'Inhalt eingeben…', insp_gate:'Logikgatter', gate_none:'Keins', gate_var:'Var', insp_val:'Wert (Variable)', insp_color:'Farbe', insp_reset:'Größe zurücksetzen', insp_del:'Knoten löschen', sb_docs:'Dokumente', sb_new:'Neu', sb_theme:'Farbthema', sb_lang:'Sprache', sb_about:'Über Mindscape', sb_empty:'Keine Dokumente', doc_nodes:'Knoten', t_just:'gerade eben', t_min:'Min.', t_hour:'Std.', del:'Löschen', menu_title:'Dokumente / Verlauf', port_title:'Ziehen zum Verbinden, Klick für Kindknoten', resize_title:'Ziehen zum Skalieren', hint:'Doppelklick für neuen Knoten · Port ziehen zum Verbinden (im Leeren neu erstellen) · Kante klicken zum Löschen/Neuverbinden · Ecke ziehen zum Skalieren', about_ver:'VERSION 1.0 · thought · logic atlas', about_desc:'Ein abhängigkeitsfreies, offlinefähiges Werkzeug zum Visualisieren von Mindmaps und booleschen Logikgraphen. Basierend auf einem beliebigen gerichteten Graphmodell — saubere Bäume oder n-zu-n-, gemeinsame und rekursive Netze.', about_f1:'Mindmap-/Logik-Doppelmodus mit Live-Auswertung', about_f2:'Freie Knoten, beliebige Kanten, Löschen/Neuverbinden, Größe', about_f3:'Horizontales / vertikales / adaptives Layout', about_f4:'Lichtpunkt-Demo entlang der Kanten (Schleife / einmal)', about_f5:'Chat-artiger Dokumentverlauf, Auto-Speichern', about_f6:'Mehrere Farbthemen; Export Markdown / PNG / TXT / JSON', about_tech:'Technik: reines HTML/CSS/JavaScript (keine Laufzeit-Abhängigkeiten) + optional Electron.', about_design:'Designsprache von Leaf Hub. MIT-Lizenz.', about_author:'Von einem Solo-Full-Stack-Entwickler (Leaf Hub).', about_site:'Autor · pingyi.me', about_repo:'Auf GitHub ansehen', theme_leaf:'Blatt', theme_rose:'Rose', theme_mint:'Minze', theme_sky:'Himmel', theme_sand:'Sand', theme_dark:'Dunkel', t_edge_exists:'Kante existiert bereits', t_edge_del:'Kante gelöscht', t_reconn:'Neu verbunden', t_linked:'Verbunden', t_selfloop:'Selbstschleife hinzugefügt (rekursiv)', t_node_del:'Knoten gelöscht', t_size_reset:'Größe zurückgesetzt', t_md:'Markdown exportiert', t_txt:'TXT exportiert', t_json_saved:'Projekt gespeichert', t_png:'PNG exportiert', t_empty:'Nichts zu exportieren', t_import_ok:'Importiert · {n} Knoten', t_import_none:'Nichts zu importieren', t_loaded:'Projekt geladen', t_json_err:'JSON-Analyse fehlgeschlagen', t_storage_full:'Lokaler Speicher voll', t_no_nodes:'Keine Knoten für Demo', default_node:'Neuer Knoten', unnamed:'Unbenannt', import_root:'Importiert', new_doc:'Neues Dokument' },
+            'es': { mode_mind:'Mapa mental', mode_logic:'Lógica', add:'Nuevo nodo', fit:'Centrar', demo:'Demo', export:'Exportar', lay_h:'Horizontal', lay_v:'Vertical', lay_auto:'Adaptativo', name_h:'Horizontal', name_v:'Vertical', auto_suffix:' · auto', exp_md:'Markdown (.md)', exp_png:'Imagen (.png)', exp_txt:'Texto (.txt)', exp_import:'Importar Markdown / proyecto', exp_json:'Guardar proyecto (.json)', demo_start:'Iniciar demo', demo_stop:'Detener demo', demo_way:'Modo', demo_loop:'Bucle', demo_single:'Una vez', demo_freq:'Frecuencia', demo_speed:'Velocidad', demo_color:'Color', insp_title:'Nodo', insp_text:'Texto', insp_text_ph:'Escribe el contenido…', insp_gate:'Puerta lógica', gate_none:'Ninguna', gate_var:'Var', insp_val:'Valor (variable)', insp_color:'Color', insp_reset:'Restablecer tamaño', insp_del:'Eliminar nodo', sb_docs:'Documentos', sb_new:'Nuevo', sb_theme:'Tema de color', sb_lang:'Idioma', sb_about:'Acerca de Mindscape', sb_empty:'Sin documentos', doc_nodes:'nodos', t_just:'ahora', t_min:'min', t_hour:'h', del:'Eliminar', menu_title:'Documentos / historial', port_title:'Arrastra para conectar, clic para hijo', resize_title:'Arrastra para redimensionar', hint:'Doble clic para crear un nodo · arrastra el puerto para conectar (soltar en vacío crea y enlaza) · clic en una arista para borrar/reconectar · esquina para redimensionar', about_ver:'VERSIÓN 1.0 · thought · logic atlas', about_desc:'Una herramienta sin dependencias y lista para usar sin conexión para visualizar mapas mentales y grafos de lógica booleana. Basada en un modelo de grafo dirigido arbitrario: árboles ordenados o redes lógicas de muchos a muchos, compartidas y recursivas.', about_f1:'Modo doble mapa mental / lógica con evaluación en vivo', about_f2:'Nodos libres, aristas libres, borrar/reconectar, tamaño', about_f3:'Diseño horizontal / vertical / adaptativo', about_f4:'Demo de puntos de luz a lo largo de las aristas (bucle / una vez)', about_f5:'Historial de documentos tipo chat, autoguardado', about_f6:'Varios temas de color; exporta Markdown / PNG / TXT / JSON', about_tech:'Tecnología: HTML/CSS/JavaScript puro (sin dependencias) + Electron opcional.', about_design:'Lenguaje de diseño de Leaf Hub. Licencia MIT.', about_author:'Por un desarrollador full-stack en solitario (Leaf Hub).', about_site:'Autor · pingyi.me', about_repo:'Ver en GitHub', theme_leaf:'Hoja', theme_rose:'Rosa', theme_mint:'Menta', theme_sky:'Cielo', theme_sand:'Arena', theme_dark:'Oscuro', t_edge_exists:'La arista ya existe', t_edge_del:'Arista eliminada', t_reconn:'Reconectada', t_linked:'Conectada', t_selfloop:'Bucle propio añadido (recursivo)', t_node_del:'Nodo eliminado', t_size_reset:'Tamaño restablecido', t_md:'Markdown exportado', t_txt:'TXT exportado', t_json_saved:'Proyecto guardado', t_png:'PNG exportado', t_empty:'Nada que exportar', t_import_ok:'Importado · {n} nodos', t_import_none:'Nada que importar', t_loaded:'Proyecto cargado', t_json_err:'Error al analizar JSON', t_storage_full:'Almacenamiento local lleno', t_no_nodes:'Sin nodos para la demo', default_node:'Nuevo nodo', unnamed:'Sin título', import_root:'Importado', new_doc:'Nuevo documento' },
+            'pt': { mode_mind:'Mapa mental', mode_logic:'Lógica', add:'Novo nó', fit:'Centralizar', demo:'Demo', export:'Exportar', lay_h:'Horizontal', lay_v:'Vertical', lay_auto:'Adaptável', name_h:'Horizontal', name_v:'Vertical', auto_suffix:' · auto', exp_md:'Markdown (.md)', exp_png:'Imagem (.png)', exp_txt:'Texto (.txt)', exp_import:'Importar Markdown / projeto', exp_json:'Salvar projeto (.json)', demo_start:'Iniciar demo', demo_stop:'Parar demo', demo_way:'Modo', demo_loop:'Repetir', demo_single:'Uma vez', demo_freq:'Frequência', demo_speed:'Velocidade', demo_color:'Cor', insp_title:'Nó', insp_text:'Texto', insp_text_ph:'Digite o conteúdo…', insp_gate:'Porta lógica', gate_none:'Nenhuma', gate_var:'Var', insp_val:'Valor (variável)', insp_color:'Cor', insp_reset:'Redefinir tamanho', insp_del:'Excluir nó', sb_docs:'Documentos', sb_new:'Novo', sb_theme:'Tema de cor', sb_lang:'Idioma', sb_about:'Sobre o Mindscape', sb_empty:'Sem documentos', doc_nodes:'nós', t_just:'agora', t_min:'min', t_hour:'h', del:'Excluir', menu_title:'Documentos / histórico', port_title:'Arraste para conectar, clique para filho', resize_title:'Arraste para redimensionar', hint:'Clique duplo para criar um nó · arraste a porta para conectar (soltar no vazio cria e liga) · clique numa aresta para excluir/reconectar · canto para redimensionar', about_ver:'VERSÃO 1.0 · thought · logic atlas', about_desc:'Uma ferramenta sem dependências e pronta para uso offline para visualizar mapas mentais e grafos de lógica booleana. Baseada num modelo de grafo dirigido arbitrário — árvores organizadas ou redes lógicas muitos-para-muitos, compartilhadas e recursivas.', about_f1:'Modo duplo mapa mental / lógica com avaliação ao vivo', about_f2:'Nós livres, arestas livres, excluir/reconectar, tamanho', about_f3:'Layout horizontal / vertical / adaptável', about_f4:'Demo de pontos de luz ao longo das arestas (repetir / uma vez)', about_f5:'Histórico de documentos estilo chat, salvamento automático', about_f6:'Vários temas de cor; exporta Markdown / PNG / TXT / JSON', about_tech:'Tecnologia: HTML/CSS/JavaScript puro (sem dependências) + Electron opcional.', about_design:'Linguagem visual do Leaf Hub. Licença MIT.', about_author:'Por um desenvolvedor full-stack solo (Leaf Hub).', about_site:'Autor · pingyi.me', about_repo:'Ver no GitHub', theme_leaf:'Folha', theme_rose:'Rosa', theme_mint:'Menta', theme_sky:'Céu', theme_sand:'Areia', theme_dark:'Escuro', t_edge_exists:'A aresta já existe', t_edge_del:'Aresta excluída', t_reconn:'Reconectada', t_linked:'Conectada', t_selfloop:'Autociclo adicionado (recursivo)', t_node_del:'Nó excluído', t_size_reset:'Tamanho redefinido', t_md:'Markdown exportado', t_txt:'TXT exportado', t_json_saved:'Projeto salvo', t_png:'PNG exportado', t_empty:'Nada para exportar', t_import_ok:'Importado · {n} nós', t_import_none:'Nada para importar', t_loaded:'Projeto carregado', t_json_err:'Falha ao analisar JSON', t_storage_full:'Armazenamento local cheio', t_no_nodes:'Sem nós para a demo', default_node:'Novo nó', unnamed:'Sem título', import_root:'Importado', new_doc:'Novo documento' },
+            'ru': { mode_mind:'Интеллект-карта', mode_logic:'Логика', add:'Новый узел', fit:'По центру', demo:'Демо', export:'Экспорт', lay_h:'Горизонтально', lay_v:'Вертикально', lay_auto:'Авто', name_h:'Гориз.', name_v:'Верт.', auto_suffix:' · авто', exp_md:'Markdown (.md)', exp_png:'Изображение (.png)', exp_txt:'Текст (.txt)', exp_import:'Импорт Markdown / проекта', exp_json:'Сохранить проект (.json)', demo_start:'Запустить', demo_stop:'Остановить', demo_way:'Режим', demo_loop:'Цикл', demo_single:'Один раз', demo_freq:'Частота', demo_speed:'Скорость', demo_color:'Цвет', insp_title:'Узел', insp_text:'Текст', insp_text_ph:'Введите содержимое…', insp_gate:'Лог. вентиль', gate_none:'Нет', gate_var:'Перем.', insp_val:'Значение (переменная)', insp_color:'Цвет', insp_reset:'Сбросить размер', insp_del:'Удалить узел', sb_docs:'Документы', sb_new:'Новый', sb_theme:'Цветовая тема', sb_lang:'Язык', sb_about:'О Mindscape', sb_empty:'Нет документов', doc_nodes:'узлов', t_just:'только что', t_min:'мин назад', t_hour:'ч назад', del:'Удалить', menu_title:'Документы / история', port_title:'Тяните для связи, клик — дочерний', resize_title:'Тяните для изменения размера', hint:'Двойной клик — новый узел · тяните порт для связи (отпустите на пустом — создать и связать) · клик по ребру — удалить/переподключить · угол — размер', about_ver:'ВЕРСИЯ 1.0 · thought · logic atlas', about_desc:'Инструмент без зависимостей и с поддержкой офлайна для визуализации интеллект-карт и булевых логических графов. Основан на модели произвольного ориентированного графа — аккуратные деревья или сети «многие ко многим», общие и рекурсивные.', about_f1:'Два режима: карта / логика, вычисление вентилей в реальном времени', about_f2:'Свободные узлы, рёбра, удаление/переподключение, размер', about_f3:'Горизонтальная / вертикальная / адаптивная раскладка', about_f4:'Демо со светящимися точками вдоль рёбер (цикл / один раз)', about_f5:'История документов как чат, автосохранение', about_f6:'Несколько тем; экспорт Markdown / PNG / TXT / JSON', about_tech:'Технологии: чистый HTML/CSS/JavaScript (без зависимостей) + опционально Electron.', about_design:'Дизайн-язык из Leaf Hub. Лицензия MIT.', about_author:'Автор — full-stack разработчик-одиночка (Leaf Hub).', about_site:'Автор · pingyi.me', about_repo:'Открыть на GitHub', theme_leaf:'Лист', theme_rose:'Роза', theme_mint:'Мята', theme_sky:'Небо', theme_sand:'Песок', theme_dark:'Тёмная', t_edge_exists:'Связь уже существует', t_edge_del:'Связь удалена', t_reconn:'Переподключено', t_linked:'Связано', t_selfloop:'Добавлена петля (рекурсия)', t_node_del:'Узел удалён', t_size_reset:'Размер сброшен', t_md:'Markdown экспортирован', t_txt:'TXT экспортирован', t_json_saved:'Проект сохранён', t_png:'PNG экспортирован', t_empty:'Нечего экспортировать', t_import_ok:'Импортировано · {n} узлов', t_import_none:'Нечего импортировать', t_loaded:'Проект загружен', t_json_err:'Ошибка разбора JSON', t_storage_full:'Локальное хранилище заполнено', t_no_nodes:'Нет узлов для демо', default_node:'Новый узел', unnamed:'Без названия', import_root:'Импорт', new_doc:'Новый документ' },
+            'ar': { mode_mind:'خريطة ذهنية', mode_logic:'منطق', add:'عقدة جديدة', fit:'توسيط', demo:'عرض', export:'تصدير', lay_h:'أفقي', lay_v:'رأسي', lay_auto:'تلقائي', name_h:'أفقي', name_v:'رأسي', auto_suffix:' · تلقائي', exp_md:'Markdown (.md)', exp_png:'صورة (.png)', exp_txt:'نص (.txt)', exp_import:'استيراد Markdown / مشروع', exp_json:'حفظ المشروع (.json)', demo_start:'بدء العرض', demo_stop:'إيقاف العرض', demo_way:'الوضع', demo_loop:'تكرار', demo_single:'مرة واحدة', demo_freq:'التردد', demo_speed:'السرعة', demo_color:'اللون', insp_title:'عقدة', insp_text:'نص', insp_text_ph:'أدخل المحتوى…', insp_gate:'بوابة منطقية', gate_none:'بلا', gate_var:'متغير', insp_val:'القيمة (متغير)', insp_color:'اللون', insp_reset:'إعادة الحجم', insp_del:'حذف العقدة', sb_docs:'المستندات', sb_new:'جديد', sb_theme:'سمة الألوان', sb_lang:'اللغة', sb_about:'حول Mindscape', sb_empty:'لا مستندات', doc_nodes:'عقدة', t_just:'الآن', t_min:'دقيقة', t_hour:'ساعة', del:'حذف', menu_title:'المستندات / السجل', port_title:'اسحب للربط، انقر لإضافة فرع', resize_title:'اسحب لتغيير الحجم', hint:'انقر نقرًا مزدوجًا لإنشاء عقدة · اسحب المنفذ للربط (الإفلات في الفراغ ينشئ ويربط) · انقر على خط للحذف/إعادة الربط · اسحب الزاوية لتغيير الحجم', about_ver:'الإصدار 1.0 · thought · logic atlas', about_desc:'أداة بدون اعتماديات وتعمل دون اتصال لتصور الخرائط الذهنية ورسوم المنطق البولياني. مبنية على نموذج رسم بياني موجَّه عام — أشجار مرتبة أو شبكات منطقية متعددة ومشتركة وتعاودية.', about_f1:'وضعان: خريطة ذهنية / منطق مع تقييم فوري', about_f2:'عقد حرة، حواف حرة، حذف/إعادة ربط، تغيير الحجم', about_f3:'تخطيط أفقي / رأسي / تلقائي', about_f4:'عرض نقاط ضوئية تتدفق على الحواف (تكرار / مرة)', about_f5:'سجل مستندات بأسلوب الدردشة، حفظ تلقائي', about_f6:'سمات ألوان متعددة؛ تصدير Markdown / PNG / TXT / JSON', about_tech:'التقنية: HTML/CSS/JavaScript خالص (بدون اعتماديات) + Electron اختياري.', about_design:'لغة التصميم من Leaf Hub. رخصة MIT.', about_author:'بواسطة مطوّر full-stack منفرد (Leaf Hub).', about_site:'المؤلف · pingyi.me', about_repo:'عرض على GitHub', theme_leaf:'ورقة', theme_rose:'وردي', theme_mint:'نعناع', theme_sky:'سماء', theme_sand:'رمل', theme_dark:'داكن', t_edge_exists:'الرابط موجود مسبقًا', t_edge_del:'تم حذف الرابط', t_reconn:'تمت إعادة الربط', t_linked:'تم الربط', t_selfloop:'تمت إضافة حلقة ذاتية (تعاودية)', t_node_del:'تم حذف العقدة', t_size_reset:'تمت إعادة الحجم', t_md:'تم تصدير Markdown', t_txt:'تم تصدير TXT', t_json_saved:'تم حفظ المشروع', t_png:'تم تصدير PNG', t_empty:'لا شيء للتصدير', t_import_ok:'تم الاستيراد · {n} عقدة', t_import_none:'لا شيء للاستيراد', t_loaded:'تم تحميل المشروع', t_json_err:'فشل تحليل JSON', t_storage_full:'التخزين المحلي ممتلئ', t_no_nodes:'لا عقد للعرض', default_node:'عقدة جديدة', unnamed:'بدون عنوان', import_root:'محتوى مستورد', new_doc:'مستند جديد' },
+            'hi': { mode_mind:'माइंड मैप', mode_logic:'लॉजिक', add:'नया नोड', fit:'केंद्र', demo:'डेमो', export:'निर्यात', lay_h:'क्षैतिज', lay_v:'लंबवत', lay_auto:'अनुकूली', name_h:'क्षैतिज', name_v:'लंबवत', auto_suffix:' · ऑटो', exp_md:'Markdown (.md)', exp_png:'छवि (.png)', exp_txt:'टेक्स्ट (.txt)', exp_import:'Markdown / प्रोजेक्ट आयात', exp_json:'प्रोजेक्ट सहेजें (.json)', demo_start:'डेमो शुरू', demo_stop:'डेमो रोकें', demo_way:'मोड', demo_loop:'लूप', demo_single:'एक बार', demo_freq:'पल्स दर', demo_speed:'गति', demo_color:'रंग', insp_title:'नोड', insp_text:'टेक्स्ट', insp_text_ph:'सामग्री दर्ज करें…', insp_gate:'लॉजिक गेट', gate_none:'कोई नहीं', gate_var:'चर', insp_val:'मान (चर)', insp_color:'रंग', insp_reset:'आकार रीसेट', insp_del:'नोड हटाएँ', sb_docs:'दस्तावेज़', sb_new:'नया', sb_theme:'रंग थीम', sb_lang:'भाषा', sb_about:'Mindscape के बारे में', sb_empty:'कोई दस्तावेज़ नहीं', doc_nodes:'नोड', t_just:'अभी', t_min:'मिनट पहले', t_hour:'घंटे पहले', del:'हटाएँ', menu_title:'दस्तावेज़ / इतिहास', port_title:'जोड़ने के लिए खींचें, चाइल्ड के लिए क्लिक', resize_title:'आकार बदलने के लिए खींचें', hint:'नोड बनाने के लिए डबल-क्लिक · जोड़ने के लिए पोर्ट खींचें (खाली में छोड़ें तो नया बनेगा) · हटाने/पुनः जोड़ने के लिए किनारे पर क्लिक · आकार के लिए कोना खींचें', about_ver:'संस्करण 1.0 · thought · logic atlas', about_desc:'माइंड मैप और बूलियन-लॉजिक ग्राफ़ देखने के लिए शून्य-निर्भरता, ऑफ़लाइन उपकरण। मनमाने डायरेक्टेड ग्राफ़ मॉडल पर आधारित — साफ़ ट्री या बहु-से-बहु, साझा और पुनरावर्ती नेटवर्क।', about_f1:'माइंड-मैप / लॉजिक दोहरा मोड, गेट का लाइव मूल्यांकन', about_f2:'मुक्त नोड, मुक्त किनारे, हटाना/पुनः जोड़ना, आकार', about_f3:'क्षैतिज / लंबवत / अनुकूली लेआउट', about_f4:'किनारों पर बहती प्रकाश-डेमो (लूप / एक बार)', about_f5:'चैट-शैली दस्तावेज़ इतिहास, स्वतः सहेजना', about_f6:'कई रंग थीम; Markdown / PNG / TXT / JSON निर्यात', about_tech:'तकनीक: शुद्ध HTML/CSS/JavaScript (कोई निर्भरता नहीं) + वैकल्पिक Electron.', about_design:'डिज़ाइन भाषा Leaf Hub से। MIT लाइसेंस।', about_author:'एक एकल फुल-स्टैक डेवलपर द्वारा (Leaf Hub)।', about_site:'लेखक · pingyi.me', about_repo:'GitHub पर देखें', theme_leaf:'पत्ती', theme_rose:'गुलाब', theme_mint:'पुदीना', theme_sky:'आकाश', theme_sand:'रेत', theme_dark:'गहरा', t_edge_exists:'किनारा पहले से मौजूद है', t_edge_del:'किनारा हटाया गया', t_reconn:'पुनः जोड़ा गया', t_linked:'जोड़ा गया', t_selfloop:'स्व-लूप जोड़ा (पुनरावर्ती)', t_node_del:'नोड हटाया गया', t_size_reset:'आकार रीसेट', t_md:'Markdown निर्यात हुआ', t_txt:'TXT निर्यात हुआ', t_json_saved:'प्रोजेक्ट सहेजा गया', t_png:'PNG निर्यात हुआ', t_empty:'निर्यात के लिए कुछ नहीं', t_import_ok:'आयात हुआ · {n} नोड', t_import_none:'आयात के लिए कुछ नहीं', t_loaded:'प्रोजेक्ट लोड हुआ', t_json_err:'JSON पार्स विफल', t_storage_full:'लोकल स्टोरेज भरा', t_no_nodes:'डेमो हेतु कोई नोड नहीं', default_node:'नया नोड', unnamed:'अनाम', import_root:'आयातित', new_doc:'नया दस्तावेज़' },
+        };
+        let LANG = 'zh-CN';
+        function t(k) { const L = I18N[LANG] || I18N.en; return (L && L[k] != null) ? L[k] : (I18N.en[k] != null ? I18N.en[k] : k); }
+        const dirName = () => state.layout === 'v' ? t('name_v') : t('name_h');
+        function detectLang() {
+            const saved = localStorage.getItem('mindscape_lang'); if (saved && I18N[saved]) return saved;
+            const n = navigator.language || 'en';
+            if (/^zh-(tw|hk|mo)/i.test(n) || /hant/i.test(n)) return 'zh-TW';
+            if (/^zh/i.test(n)) return 'zh-CN';
+            const base = n.slice(0, 2).toLowerCase();
+            return I18N[base] ? base : 'en';
+        }
+        function applyLang(lang) {
+            LANG = I18N[lang] ? lang : 'en';
+            localStorage.setItem('mindscape_lang', LANG);
+            document.documentElement.lang = LANG;
+            document.documentElement.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+            document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPh)); });
+            document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+            if (typeof layoutLabel !== 'undefined' && layoutLabel) layoutLabel.textContent = dirName();
+            if (typeof setDemoBtn === 'function') setDemoBtn(demo.on);
+            document.querySelectorAll('#themeRow .theme-dot').forEach(d => { const th = THEMES.find(x => x.id === d.dataset.theme); if (th) d.title = t('theme_' + th.id); });
+            const ls = document.getElementById('langSel'); if (ls) ls.value = LANG;
+            if (typeof renderDocList === 'function') renderDocList();
+        }
+        function buildLangSel() {
+            const s = document.getElementById('langSel');
+            s.innerHTML = LANGS.map(([c, n]) => `<option value="${c}">${n}</option>`).join('');
+            s.value = LANG;
+            s.onchange = () => applyLang(s.value);
+        }
+
+        let state = {
+            mode: 'mind',          // 'mind' | 'logic'
+            layout: 'h',           // 'h' | 'v'
+            nodes: {},             // id -> {id,text,x,y,w,h,gate,value,color}
+            edges: {},             // eid -> {id,from,to}
+            rootId: null,
+            selected: null,        // {type:'node'|'edge', id} | null
+            uid: 0, eid: 0,
+        };
+        let view = { x: 0, y: 0, k: 1 };
+
+        const stage = document.getElementById('stage');
+        const world = document.getElementById('world');
+        const edges = document.getElementById('edges');
+        const inspector = document.getElementById('inspector');
+        const toastEl = document.getElementById('toast');
+
+        const newId = () => 'n' + (++state.uid);
+        const newEid = () => 'e' + (++state.eid);
+        const nodesArr = () => Object.values(state.nodes);
+        const edgesArr = () => Object.values(state.edges);
+        const childrenOf = (id) => edgesArr().filter(e => e.from === id).map(e => state.nodes[e.to]).filter(Boolean);
+        const parentsOf = (id) => edgesArr().filter(e => e.to === id).map(e => state.nodes[e.from]).filter(Boolean);
+        const hasEdge = (f, t) => edgesArr().some(e => e.from === f && e.to === t);
+
+        function addEdge(from, to) {
+            if (!from || !to || !state.nodes[from] || !state.nodes[to]) return null;
+            if (hasEdge(from, to)) { toast(t('t_edge_exists'), false); return null; }
+            const e = { id: newEid(), from, to };
+            state.edges[e.id] = e;
+            return e;
+        }
+        function removeEdge(eid) { delete state.edges[eid]; }
+        function removeNode(id) {
+            delete state.nodes[id];
+            edgesArr().forEach(e => { if (e.from === id || e.to === id) delete state.edges[e.id]; });
+            if (state.rootId === id) state.rootId = nodesArr()[0]?.id || null;
+        }
+
+        // ============ 示例 ============
+        function seed() {
+            state.nodes = {}; state.edges = {}; state.uid = 0; state.eid = 0;
+            const mk = (text, color) => { const n = { id: newId(), text, x: 0, y: 0, w: null, h: null, gate: 'none', value: true, color: color || null }; state.nodes[n.id] = n; return n.id; };
+            const root = mk('中心主题'); state.rootId = root;
+            const b1 = mk('第一个分支', PALETTE[0]), b2 = mk('第二个分支', PALETTE[1]), b3 = mk('第三个分支', PALETTE[2]);
+            const a = mk('想法 A'), b = mk('想法 B');
+            addEdge(root, b1); addEdge(root, b2); addEdge(root, b3);
+            addEdge(b1, a); addEdge(b1, b);
+            addEdge(b2, b); // 多连一示例：A、B 的 B 被两个分支共享
+            autoLayout('h');
+        }
+
+        // ============ 布尔求值（带环保护） ============
+        function evalNode(id, seen) {
+            seen = seen || new Set();
+            if (seen.has(id)) return false;
+            seen.add(id);
+            const n = state.nodes[id]; if (!n) return false;
+            const kids = childrenOf(id);
+            const kv = () => kids.map(k => evalNode(k.id, new Set(seen)));
+            switch (n.gate) {
+                case 'VAR': return !!n.value;
+                case 'NOT': return kids.length ? !kv().every(Boolean) : !n.value;
+                case 'AND': return kids.length ? kv().every(Boolean) : !!n.value;
+                case 'OR':  return kids.length ? kv().some(Boolean) : !!n.value;
+                case 'XOR': return kids.length ? (kv().filter(Boolean).length % 2 === 1) : !!n.value;
+                default:    return kids.length ? kv().every(Boolean) : !!n.value;
+            }
+        }
+
+        // ============ 布局（分层，支持任意有向图/环） ============
+        const sizeOf = (id) => { const e = nodeEls[id]; return e ? { w: e.offsetWidth, h: e.offsetHeight } : { w: 130, h: 46 }; };
+
+        function computeLayout(dir) {
+            const ns = nodesArr(); if (!ns.length) return;
+            // 最长路径分层（memo 预置 0 以打断环）
+            const memo = {};
+            const depthOf = (id) => {
+                if (memo[id] !== undefined) return memo[id];
+                memo[id] = 0;
+                let d = 0;
+                parentsOf(id).forEach(p => { d = Math.max(d, depthOf(p.id) + 1); });
+                memo[id] = d; return d;
+            };
+            ns.forEach(n => { n._d = depthOf(n.id); });
+            // 分层
+            const layers = {};
+            ns.forEach(n => { (layers[n._d] = layers[n._d] || []).push(n); });
+            const keys = Object.keys(layers).map(Number).sort((a, b) => a - b);
+            // 重心排序，减少交叉
+            const idx = {};
+            keys.forEach((k, li) => {
+                const layer = layers[k];
+                if (li > 0) {
+                    layer.sort((a, b) => bary(a) - bary(b));
+                }
+                layer.forEach((n, i) => idx[n.id] = i);
+            });
+            function bary(n) {
+                const ps = parentsOf(n.id).filter(p => idx[p.id] !== undefined);
+                if (!ps.length) return 1e6 + (idx[n.id] || 0);
+                return ps.reduce((s, p) => s + idx[p.id], 0) / ps.length;
+            }
+            const maxSize = Math.max(...keys.map(k => layers[k].length));
+            const LAYER = dir === 'v' ? 132 : 250, CROSS = dir === 'v' ? 200 : 92, X0 = 120, Y0 = 110;
+            keys.forEach(k => {
+                const layer = layers[k];
+                const start = (maxSize - layer.length) / 2;
+                layer.forEach((n, i) => {
+                    if (dir === 'v') { n.y = Y0 + k * LAYER; n.x = X0 + (start + i) * CROSS; }
+                    else { n.x = X0 + k * LAYER; n.y = Y0 + (start + i) * CROSS; }
+                });
+            });
+            ns.forEach(n => delete n._d);
+        }
+
+        function chooseDir() {
+            computeLayout('h'); const bh = bounds();
+            computeLayout('v'); const bv = bounds();
+            if (!bh || !bv) return 'h';
+            const vp = innerWidth / Math.max(1, innerHeight - 70);
+            const ratio = b => (b.maxX - b.minX) / Math.max(1, b.maxY - b.minY);
+            const score = r => Math.abs(Math.log(r / vp));
+            return score(ratio(bh)) <= score(ratio(bv)) ? 'h' : 'v';
+        }
+
+        function autoLayout(dir) {
+            if (!nodesArr().length) return;
+            dir = dir || state.layout || 'h';
+            state.layout = (dir === 'auto') ? chooseDir() : dir;
+            computeLayout(state.layout);
+            render(); fitView();
+        }
+
+        // ============ 渲染 ============
+        let nodeEls = {};
+        function render() {
+            const logic = state.mode === 'logic';
+            Object.values(nodeEls).forEach(el => { if (!state.nodes[el.dataset.id]) { el.remove(); delete nodeEls[el.dataset.id]; } });
+
+            nodesArr().forEach(n => {
+                let el = nodeEls[n.id];
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className = 'node'; el.dataset.id = n.id;
+                    el.innerHTML = `<span class="gate-tag"></span><div class="txt"></div><button class="port" data-i18n-title="port_title" title="${t('port_title')}">+</button><span class="resize" data-i18n-title="resize_title" title="${t('resize_title')}"></span>`;
+                    world.appendChild(el);
+                    nodeEls[n.id] = el;
+                    bindNode(el, n.id);
+                }
+                const txt = el.querySelector('.txt');
+                if (txt.textContent !== n.text && document.activeElement !== txt) txt.textContent = n.text;
+
+                const isRoot = n.id === state.rootId;
+                const selNode = state.selected && state.selected.type === 'node' && state.selected.id === n.id;
+                const val = logic ? evalNode(n.id) : null;
+                el.className = 'node' + (isRoot ? ' root' : '') + (selNode ? ' sel' : '') + (logic ? (val ? ' t-true' : ' t-false') : '');
+
+                const tag = el.querySelector('.gate-tag');
+                if (logic && n.gate && n.gate !== 'none') {
+                    tag.style.display = 'inline-block';
+                    tag.textContent = n.gate === 'VAR' ? (val ? 'VAR · T' : 'VAR · F') : n.gate;
+                } else tag.style.display = 'none';
+
+                // 自定义尺寸
+                el.style.width = n.w ? n.w + 'px' : '';
+                el.style.maxWidth = n.w ? 'none' : '';
+                el.style.height = n.h ? n.h + 'px' : '';
+
+                if (!isRoot) {
+                    if (logic) { el.style.background = ''; }
+                    else if (n.color) { el.style.background = ''; el.style.borderColor = n.color + '88'; }
+                    else { el.style.borderColor = ''; }
+                }
+                el.style.transform = `translate(${n.x}px, ${n.y}px)`;
+            });
+            drawEdges();
+            updateOverlay();
+            scheduleSave();
+        }
+
+        // 端点/控制点几何（横向走左右、竖向走上下，自由拖拽自动判断）
+        function edgeGeom(p, c) {
+            const ps = sizeOf(p.id), cs = sizeOf(c.id);
+            const pcx = p.x + ps.w / 2, pcy = p.y + ps.h / 2;
+            const ccx = c.x + cs.w / 2, ccy = c.y + cs.h / 2;
+            const dx = ccx - pcx, dy = ccy - pcy;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                const x1 = dx >= 0 ? p.x + ps.w : p.x, x2 = dx >= 0 ? c.x : c.x + cs.w, mx = (x1 + x2) / 2;
+                return { x1, y1: pcy, c1x: mx, c1y: pcy, c2x: mx, c2y: ccy, x2, y2: ccy };
+            } else {
+                const y1 = dy >= 0 ? p.y + ps.h : p.y, y2 = dy >= 0 ? c.y : c.y + cs.h, my = (y1 + y2) / 2;
+                return { x1: pcx, y1, c1x: pcx, c1y: my, c2x: ccx, c2y: my, x2: ccx, y2 };
+            }
+        }
+        const geomPath = g => `M ${g.x1} ${g.y1} C ${g.c1x} ${g.c1y}, ${g.c2x} ${g.c2y}, ${g.x2} ${g.y2}`;
+        const cubicAt = (g, t) => { const m = 1 - t; return { x: m*m*m*g.x1 + 3*m*m*t*g.c1x + 3*m*t*t*g.c2x + t*t*t*g.x2, y: m*m*m*g.y1 + 3*m*m*t*g.c1y + 3*m*t*t*g.c2y + t*t*t*g.y2 }; };
+
+        const SVGNS = 'http://www.w3.org/2000/svg';
+        function ensureDefs() {
+            if (edges.querySelector('defs')) return;
+            const defs = document.createElementNS(SVGNS, 'defs');
+            const mk = (id, color) => `<marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${color}"/></marker>`;
+            defs.innerHTML = mk('ah-d', 'rgba(124,58,237,.5)') + mk('ah-t', 'rgba(16,185,129,.75)') + mk('ah-f', 'rgba(225,29,72,.6)') + mk('ah-s', '#DB2777');
+            edges.appendChild(defs);
+            const temp = document.createElementNS(SVGNS, 'path'); temp.setAttribute('class', 'temp'); temp.id = 'tempEdge'; temp.style.display = 'none';
+            edges.appendChild(temp);
+        }
+        function drawEdges() {
+            ensureDefs();
+            edges.querySelectorAll('.eg').forEach(e => e.remove());
+            const temp = document.getElementById('tempEdge');
+            const logic = state.mode === 'logic';
+            edgesArr().forEach(e => {
+                const p = state.nodes[e.from], c = state.nodes[e.to];
+                if (!p || !c) return;
+                const g = edgeGeom(p, c), d = geomPath(g);
+                const selEdge = state.selected && state.selected.type === 'edge' && state.selected.id === e.id;
+                const tv = logic ? evalNode(e.to) : null;
+                const cls = logic ? (tv ? 'true' : 'false') : '';
+                const hit = document.createElementNS(SVGNS, 'path');
+                hit.setAttribute('class', 'eg hit'); hit.setAttribute('d', d); hit.dataset.eid = e.id;
+                const line = document.createElementNS(SVGNS, 'path');
+                line.setAttribute('class', 'eg line ' + cls + (selEdge ? ' sel' : '')); line.setAttribute('d', d); line.dataset.eid = e.id;
+                const marker = selEdge ? 'ah-s' : (logic ? (tv ? 'ah-t' : 'ah-f') : 'ah-d');
+                line.setAttribute('marker-end', `url(#${marker})`);
+                edges.insertBefore(hit, temp); edges.insertBefore(line, temp);
+            });
+        }
+
+        // 连线编辑覆盖层（删除按钮 + 两个端点把手）
+        let overlayEls = { del: null, ep1: null, ep2: null };
+        function clearOverlay() { Object.values(overlayEls).forEach(e => e && e.remove()); overlayEls = { del: null, ep1: null, ep2: null }; }
+        function updateOverlay() {
+            clearOverlay();
+            if (!state.selected || state.selected.type !== 'edge') return;
+            const e = state.edges[state.selected.id]; if (!e) return;
+            const p = state.nodes[e.from], c = state.nodes[e.to]; if (!p || !c) return;
+            const g = edgeGeom(p, c), mid = cubicAt(g, 0.5);
+            const del = document.createElement('button'); del.className = 'edge-del';
+            del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+            del.style.left = mid.x + 'px'; del.style.top = mid.y + 'px';
+            del.onclick = (ev) => { ev.stopPropagation(); removeEdge(e.id); deselect(); render(); toast(t('t_edge_del')); };
+            world.appendChild(del); overlayEls.del = del;
+            overlayEls.ep1 = makeEndpoint(e, 'from', g.x1, g.y1);
+            overlayEls.ep2 = makeEndpoint(e, 'to', g.x2, g.y2);
+        }
+        function makeEndpoint(e, role, x, y) {
+            const ep = document.createElement('div'); ep.className = 'ep';
+            ep.style.left = x + 'px'; ep.style.top = y + 'px';
+            world.appendChild(ep);
+            ep.addEventListener('pointerdown', (ev) => {
+                ev.stopPropagation(); ev.preventDefault();
+                const fixed = role === 'from' ? e.to : e.from;
+                const temp = document.getElementById('tempEdge');
+                const move = (mv) => {
+                    const w = toWorld(mv.clientX, mv.clientY);
+                    const fx = state.nodes[fixed];
+                    const g = geomToPoint(fx, w.x, w.y, role === 'from'); // 反向时把手代表 from
+                    temp.style.display = ''; temp.setAttribute('d', g);
+                };
+                const up = (uv) => {
+                    window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+                    temp.style.display = 'none';
+                    const tgt = nodeAtPoint(uv.clientX, uv.clientY);
+                    if (tgt) {
+                        const nf = role === 'from' ? tgt : e.from;
+                        const nt = role === 'from' ? e.to : tgt;
+                        if (!hasEdge(nf, nt) || (nf === e.from && nt === e.to)) { e.from = nf; e.to = nt; toast(t('t_reconn')); }
+                        else toast(t('t_edge_exists'), false);
+                    }
+                    render();
+                };
+                window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+            });
+            return ep;
+        }
+
+        function applyView() {
+            world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.k})`;
+            document.getElementById('zoomval').textContent = Math.round(view.k * 100) + '%';
+        }
+        const toWorld = (cx, cy) => ({ x: (cx - view.x) / view.k, y: (cy - view.y) / view.k });
+        function nodeAtPoint(cx, cy) {
+            const el = document.elementFromPoint(cx, cy);
+            const node = el && el.closest && el.closest('.node');
+            return node ? node.dataset.id : null;
+        }
+        // 从节点到任意世界点的临时路径（forward: 节点是 from）
+        function geomToPoint(node, wx, wy, nodeIsTo) {
+            const ps = sizeOf(node.id);
+            const pcx = node.x + ps.w / 2, pcy = node.y + ps.h / 2;
+            const dx = wx - pcx, dy = wy - pcy;
+            let nx, ny;
+            if (Math.abs(dx) >= Math.abs(dy)) { nx = dx >= 0 ? node.x + ps.w : node.x; ny = pcy; }
+            else { ny = dy >= 0 ? node.y + ps.h : node.y; nx = pcx; }
+            const a = nodeIsTo ? { x: wx, y: wy } : { x: nx, y: ny };
+            const b = nodeIsTo ? { x: nx, y: ny } : { x: wx, y: wy };
+            const mx = (a.x + b.x) / 2;
+            return `M ${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;
+        }
+
+        // ============ 节点交互 ============
+        function bindNode(el, id) {
+            const txt = el.querySelector('.txt');
+            const port = el.querySelector('.port');
+            const resize = el.querySelector('.resize');
+            let down = null;
+
+            el.addEventListener('pointerdown', (e) => {
+                if (e.target === port || e.target === resize) return;
+                if (e.target === txt && txt.isContentEditable) return;
+                e.stopPropagation();
+                selectNode(id);
+                const n = state.nodes[id];
+                down = { sx: e.clientX, sy: e.clientY, nx: n.x, ny: n.y };
+                el.setPointerCapture(e.pointerId);
+            });
+            el.addEventListener('pointermove', (e) => {
+                if (!down) return;
+                const n = state.nodes[id];
+                n.x = down.nx + (e.clientX - down.sx) / view.k;
+                n.y = down.ny + (e.clientY - down.sy) / view.k;
+                el.style.transform = `translate(${n.x}px, ${n.y}px)`;
+                drawEdges();
+            });
+            el.addEventListener('pointerup', () => { if (down) scheduleSave(); down = null; });
+            el.addEventListener('dblclick', (e) => { e.stopPropagation(); startEdit(txt, id); });
+
+            txt.addEventListener('blur', () => {
+                txt.contentEditable = 'false';
+                state.nodes[id].text = txt.textContent.trim() || t('unnamed');
+                txt.textContent = state.nodes[id].text;
+                drawEdges(); refreshInspector(); scheduleSave();
+            });
+            txt.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); txt.blur(); } });
+
+            // 端口：点击加子节点；拖拽连线
+            port.addEventListener('pointerdown', (e) => {
+                e.stopPropagation(); e.preventDefault();
+                const startC = { x: e.clientX, y: e.clientY };
+                let moved = false;
+                const temp = document.getElementById('tempEdge');
+                stage.classList.add('linking');
+                const move = (mv) => {
+                    if (Math.abs(mv.clientX - startC.x) + Math.abs(mv.clientY - startC.y) > 3) moved = true;
+                    if (!moved) return;
+                    const w = toWorld(mv.clientX, mv.clientY);
+                    temp.style.display = ''; temp.setAttribute('d', geomToPoint(state.nodes[id], w.x, w.y, false));
+                };
+                const up = (uv) => {
+                    window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+                    temp.style.display = 'none'; stage.classList.remove('linking');
+                    if (!moved) { addChild(id); return; }
+                    const tgt = nodeAtPoint(uv.clientX, uv.clientY);
+                    if (tgt && tgt !== id) { addEdge(id, tgt); render(); toast(t('t_linked')); }
+                    else if (tgt === id) { addEdge(id, id); render(); toast(t('t_selfloop')); }
+                    else { // 松手到空白：新建节点并连接
+                        const w = toWorld(uv.clientX, uv.clientY);
+                        const nid = createNode(w.x - 65, w.y - 22);
+                        addEdge(id, nid); render(); selectNode(nid);
+                        const ne = nodeEls[nid]; if (ne) startEdit(ne.querySelector('.txt'), nid);
+                    }
+                };
+                window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+            });
+
+            // 缩放手柄
+            resize.addEventListener('pointerdown', (e) => {
+                e.stopPropagation(); e.preventDefault();
+                const n = state.nodes[id];
+                const s = { x: e.clientX, y: e.clientY, w: el.offsetWidth, h: el.offsetHeight };
+                const move = (mv) => {
+                    n.w = Math.max(84, Math.round(s.w + (mv.clientX - s.x) / view.k));
+                    n.h = Math.max(40, Math.round(s.h + (mv.clientY - s.y) / view.k));
+                    el.style.width = n.w + 'px'; el.style.maxWidth = 'none'; el.style.height = n.h + 'px';
+                    drawEdges(); updateOverlay();
+                };
+                const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); refreshInspector(); scheduleSave(); };
+                window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+            });
+        }
+
+        function startEdit(txt, id) {
+            txt.contentEditable = 'true'; txt.focus();
+            const r = document.createRange(); r.selectNodeContents(txt);
+            const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        }
+
+        function createNode(x, y, text) {
+            const n = { id: newId(), text: text || t('default_node'), x, y, w: null, h: null, gate: 'none', value: true, color: null };
+            state.nodes[n.id] = n;
+            if (!state.rootId) state.rootId = n.id;
+            return n.id;
+        }
+        function addChild(parentId) {
+            const p = state.nodes[parentId];
+            const nid = createNode(p.x + 200, p.y);
+            addEdge(parentId, nid);
+            render(); selectNode(nid);
+            const el = nodeEls[nid]; if (el) startEdit(el.querySelector('.txt'), nid);
+        }
+        // 凭空建节点（视口中心）
+        function addFreeNode() {
+            const c = toWorld(innerWidth / 2, innerHeight / 2);
+            const nid = createNode(c.x - 65, c.y - 22);
+            render(); selectNode(nid);
+            const el = nodeEls[nid]; if (el) startEdit(el.querySelector('.txt'), nid);
+        }
+
+        function selectNode(id) {
+            state.selected = { type: 'node', id };
+            nodesArr().forEach(n => nodeEls[n.id] && nodeEls[n.id].classList.toggle('sel', n.id === id));
+            edges.querySelectorAll('.line').forEach(l => l.classList.remove('sel'));
+            inspector.classList.add('show'); updateOverlay(); refreshInspector();
+        }
+        function selectEdge(eid) {
+            state.selected = { type: 'edge', id: eid };
+            nodesArr().forEach(n => nodeEls[n.id] && nodeEls[n.id].classList.remove('sel'));
+            inspector.classList.remove('show');
+            drawEdges(); updateOverlay();
+        }
+        function deselect() {
+            state.selected = null;
+            nodesArr().forEach(n => nodeEls[n.id] && nodeEls[n.id].classList.remove('sel'));
+            inspector.classList.remove('show');
+            drawEdges(); clearOverlay();
+        }
+        function deleteSelected() {
+            if (!state.selected) return;
+            if (state.selected.type === 'node') {
+                const id = state.selected.id;
+                removeNode(id); if (nodeEls[id]) { nodeEls[id].remove(); delete nodeEls[id]; }
+                deselect(); render(); toast(t('t_node_del'));
+            } else { removeEdge(state.selected.id); deselect(); render(); toast(t('t_edge_del')); }
+        }
+
+        // 连线点击选中（阻止冒泡到 stage 平移）
+        edges.addEventListener('pointerdown', (e) => {
+            const eid = e.target.dataset && e.target.dataset.eid;
+            if (eid) { e.stopPropagation(); selectEdge(eid); }
+        });
+
+        // ============ 检查器 ============
+        const insText = document.getElementById('insText');
+        function refreshInspector() {
+            if (!state.selected || state.selected.type !== 'node') return;
+            const n = state.nodes[state.selected.id]; if (!n) return;
+            if (document.activeElement !== insText) insText.value = n.text;
+            const inC = parentsOf(n.id).length, outC = childrenOf(n.id).length;
+            document.getElementById('insMeta').textContent = `←${inC} →${outC}`;
+            document.getElementById('gateField').style.display = state.mode === 'logic' ? '' : 'none';
+            document.getElementById('valField').style.display =
+                (state.mode === 'logic' && (n.gate === 'VAR' || (n.gate === 'none' && childrenOf(n.id).length === 0))) ? '' : 'none';
+            document.querySelectorAll('#gateGrid button').forEach(b => b.classList.toggle('on', b.dataset.gate === (n.gate || 'none')));
+            const v = !!n.value;
+            document.querySelectorAll('#valToggle button').forEach(b => { const isT = b.dataset.val === 'true'; b.classList.toggle('on-t', isT && v); b.classList.toggle('on-f', !isT && !v); });
+            document.querySelectorAll('#swatches button').forEach(b => b.classList.toggle('on', b.dataset.color === n.color));
+        }
+        const selNode = () => (state.selected && state.selected.type === 'node') ? state.nodes[state.selected.id] : null;
+        insText.addEventListener('input', () => {
+            const n = selNode(); if (!n) return;
+            n.text = insText.value;
+            const el = nodeEls[n.id]; if (el && document.activeElement !== el.querySelector('.txt')) el.querySelector('.txt').textContent = n.text;
+            drawEdges(); scheduleSave();
+        });
+        document.getElementById('gateGrid').addEventListener('click', (e) => { const b = e.target.closest('button'); const n = selNode(); if (!b || !n) return; n.gate = b.dataset.gate; render(); refreshInspector(); });
+        document.getElementById('valToggle').addEventListener('click', (e) => { const b = e.target.closest('button'); const n = selNode(); if (!b || !n) return; n.value = b.dataset.val === 'true'; render(); refreshInspector(); });
+        const swEl = document.getElementById('swatches');
+        swEl.innerHTML = '<button data-color="" style="background:#fff" title="默认"></button>' + PALETTE.map(c => `<button data-color="${c}" style="background:${c}"></button>`).join('');
+        swEl.addEventListener('click', (e) => { const b = e.target.closest('button'); const n = selNode(); if (!b || !n) return; n.color = b.dataset.color || null; render(); refreshInspector(); });
+        document.getElementById('resetSize').addEventListener('click', () => { const n = selNode(); if (!n) return; n.w = null; n.h = null; render(); refreshInspector(); toast(t('t_size_reset')); });
+        document.getElementById('delBtn').addEventListener('click', deleteSelected);
+
+        // ============ 平移 / 缩放 ============
+        stage.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.node') || e.target.closest('.ep') || e.target.closest('.edge-del')) return;
+            if (e.target.dataset && e.target.dataset.eid) return;
+            deselect();
+            stage.classList.add('panning');
+            const start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+            const move = (ev) => { view.x = start.vx + (ev.clientX - start.x); view.y = start.vy + (ev.clientY - start.y); applyView(); };
+            const up = () => { stage.classList.remove('panning'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); scheduleSave(); };
+            window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+        });
+        stage.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.node') || (e.target.dataset && e.target.dataset.eid)) return;
+            const w = toWorld(e.clientX, e.clientY);
+            const nid = createNode(w.x - 65, w.y - 22);
+            render(); selectNode(nid);
+            const el = nodeEls[nid]; if (el) startEdit(el.querySelector('.txt'), nid);
+        });
+        stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 0.89); }, { passive: false });
+
+        function zoomAt(cx, cy, factor) {
+            const nk = Math.min(2.5, Math.max(0.2, view.k * factor));
+            const r = nk / view.k;
+            view.x = cx - (cx - view.x) * r; view.y = cy - (cy - view.y) * r; view.k = nk; applyView();
+        }
+        document.getElementById('zoomIn').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 1.15);
+        document.getElementById('zoomOut').onclick = () => zoomAt(innerWidth / 2, innerHeight / 2, 0.87);
+
+        function bounds() {
+            const ns = nodesArr(); if (!ns.length) return null;
+            let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+            ns.forEach(n => { const s = sizeOf(n.id); minX = Math.min(minX, n.x); minY = Math.min(minY, n.y); maxX = Math.max(maxX, n.x + s.w); maxY = Math.max(maxY, n.y + s.h); });
+            return { minX, minY, maxX, maxY };
+        }
+        function fitView() {
+            const b = bounds(); if (!b) return;
+            const pad = 80, topbar = 70;
+            const w = b.maxX - b.minX, h = b.maxY - b.minY;
+            const aw = innerWidth - pad * 2, ah = innerHeight - topbar - pad * 2;
+            const k = Math.min(1, Math.max(0.25, Math.min(aw / Math.max(1, w), ah / Math.max(1, h))));
+            view.k = k; view.x = pad + (aw - w * k) / 2 - b.minX * k; view.y = topbar + pad + (ah - h * k) / 2 - b.minY * k; applyView();
+        }
+
+        // ============ 顶栏 ============
+        document.getElementById('modeSeg').addEventListener('click', (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            state.mode = b.dataset.mode;
+            document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b));
+            render(); refreshInspector();
+        });
+        document.getElementById('addBtn').onclick = addFreeNode;
+        document.getElementById('fitBtn').onclick = fitView;
+
+        const layoutMenu = document.getElementById('layoutMenu');
+        const layoutLabel = document.getElementById('layoutLabel');
+        document.getElementById('layoutBtn').onclick = (e) => { e.stopPropagation(); layoutMenu.classList.toggle('open'); };
+        layoutMenu.addEventListener('click', (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            layoutMenu.classList.remove('open');
+            autoLayout(b.dataset.dir);
+            layoutLabel.textContent = dirName() + (b.dataset.dir === 'auto' ? t('auto_suffix') : '');
+        });
+
+        const exportMenu = document.getElementById('exportMenu');
+        document.getElementById('exportBtn').onclick = (e) => { e.stopPropagation(); exportMenu.classList.toggle('open'); };
+        document.addEventListener('click', () => { exportMenu.classList.remove('open'); layoutMenu.classList.remove('open'); });
+        exportMenu.addEventListener('click', (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            exportMenu.classList.remove('open');
+            ({ md: exportMarkdown, txt: exportTxt, png: exportPng, json: exportJson, import: () => document.getElementById('fileInput').click() })[b.dataset.act]();
+        });
+
+        // ============ Markdown / TXT（图 → 大纲，重复引用标记 ↗） ============
+        function gateSuffix(n) {
+            if (state.mode !== 'logic' || !n.gate || n.gate === 'none') return '';
+            if (n.gate === 'VAR') return ` @VAR(${n.value ? 1 : 0})`;
+            return ` @${n.gate}`;
+        }
+        function buildOutline(useGate) {
+            const lines = [], visited = new Set();
+            const walk = (id, depth) => {
+                const n = state.nodes[id]; if (!n) return;
+                const ind = '  '.repeat(depth);
+                if (visited.has(id)) { lines.push(ind + '- ' + n.text.replace(/\n/g, ' ') + ' (↗)'); return; }
+                visited.add(id);
+                lines.push(ind + '- ' + n.text.replace(/\n/g, ' ') + (useGate ? gateSuffix(n) : ''));
+                childrenOf(id).forEach(c => walk(c.id, depth + 1));
+            };
+            let roots = nodesArr().filter(n => parentsOf(n.id).length === 0).map(n => n.id);
+            if (state.rootId && roots.includes(state.rootId)) roots = [state.rootId, ...roots.filter(r => r !== state.rootId)];
+            if (!roots.length && state.rootId) roots = [state.rootId];
+            roots.forEach(r => walk(r, 0));
+            nodesArr().forEach(n => { if (!visited.has(n.id)) walk(n.id, 0); });
+            return lines.join('\n');
+        }
+        const titleOf = () => (state.nodes[state.rootId]?.text || 'mindscape').replace(/[\\/:*?"<>|]/g, '_');
+        function exportMarkdown() { download(titleOf() + '.md', '# ' + titleOf() + '\n\n' + buildOutline(true) + '\n', 'text/markdown'); toast(t('t_md')); }
+        function exportTxt() { download(titleOf() + '.txt', buildOutline(false) + '\n', 'text/plain'); toast(t('t_txt')); }
+        function serialize() {
+            return { format: 'mindscape', version: 2, mode: state.mode, layout: state.layout, nodes: state.nodes, edges: state.edges, rootId: state.rootId, uid: state.uid, eid: state.eid, demo: { ...demoSettings }, view: { ...view } };
+        }
+        function applyState(data) {
+            stopDemo();
+            state.nodes = data.nodes || {};
+            state.edges = data.edges || {};
+            if (!data.edges) { state.eid = 0; Object.values(state.nodes).forEach(n => { if (n.parent && state.nodes[n.parent]) addEdge(n.parent, n.id); delete n.parent; }); }
+            state.rootId = data.rootId || (nodesArr()[0] && nodesArr()[0].id) || null;
+            state.uid = data.uid || nodesArr().length;
+            state.eid = data.eid || edgesArr().length;
+            state.mode = data.mode || 'mind';
+            state.layout = data.layout || 'h';
+            state.selected = null;
+            if (data.demo) Object.assign(demoSettings, data.demo);
+            syncDemoUI();
+            layoutLabel.textContent = dirName();
+            document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x.dataset.mode === state.mode));
+            inspector.classList.remove('show');
+            nodeEls = {}; clearOverlay(); world.querySelectorAll('.node').forEach(el => el.remove());
+            render();
+            if (data.view && typeof data.view.k === 'number') { view = { x: data.view.x, y: data.view.y, k: data.view.k }; applyView(); }
+            else fitView();
+        }
+        function exportJson() {
+            download(titleOf() + '.json', JSON.stringify(serialize(), null, 2), 'application/json');
+            toast(t('t_json_saved'));
+        }
+
+        // ============ 导入 ============
+        function importOutline(text) {
+            const raw = text.replace(/\r/g, '').split('\n');
+            const items = [];
+            for (let line of raw) {
+                if (!line.trim()) continue;
+                const hm = line.match(/^(#{1,6})\s+(.*)$/);
+                if (hm) { items.push({ indent: -1, text: hm[2].trim(), gate: 'none', value: true }); continue; }
+                const m = line.match(/^([ \t]*)(?:[-*+]|\d+\.)\s+(.*)$/);
+                let indent, body;
+                if (m) { indent = m[1].replace(/\t/g, '  ').length / 2; body = m[2]; }
+                else { const im = line.match(/^([ \t]*)(.*)$/); indent = im[1].replace(/\t/g, '  ').length / 2; body = im[2]; }
+                body = body.replace(/\s*\(↗\)\s*$/, '');
+                let gate = 'none', value = true;
+                const gm = body.match(/\s@(AND|OR|NOT|XOR|VAR(?:\(([01])\))?)\s*$/i);
+                if (gm) { body = body.slice(0, gm.index).trim(); const tok = gm[1].toUpperCase(); if (tok.startsWith('VAR')) { gate = 'VAR'; value = gm[2] !== '0'; } else gate = tok; }
+                items.push({ indent, text: body.trim() || t('unnamed'), gate, value });
+            }
+            if (!items.length) { toast(t('t_import_none'), false); return; }
+            const hasHeading = items[0].indent === -1;
+            state.nodes = {}; state.edges = {}; state.uid = 0; state.eid = 0; nodeEls = {}; clearOverlay();
+            world.querySelectorAll('.node').forEach(e => e.remove());
+            const stack = []; let first = null;
+            items.forEach((it, i) => {
+                const level = it.indent === -1 ? 0 : (hasHeading ? it.indent + 1 : it.indent);
+                while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+                const parent = stack.length ? stack[stack.length - 1].id : null;
+                const id = createNode(0, 0, it.text);
+                state.nodes[id].gate = it.gate; state.nodes[id].value = it.value;
+                state.nodes[id].color = parent ? PALETTE[i % PALETTE.length] : null;
+                if (parent) addEdge(parent, id);
+                if (!first) { first = id; state.rootId = id; }
+                stack.push({ level, id });
+            });
+            const tops = nodesArr().filter(n => parentsOf(n.id).length === 0);
+            if (tops.length > 1) {
+                const rid = createNode(0, 0, t('import_root'));
+                tops.forEach(t => { if (t.id !== rid) addEdge(rid, t.id); });
+                state.rootId = rid;
+            }
+            state.selected = null; inspector.classList.remove('show');
+            autoLayout(); toast(t('t_import_ok').replace('{n}', nodesArr().length));
+        }
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const f = e.target.files[0]; if (!f) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const txt = reader.result;
+                if (f.name.endsWith('.json')) {
+                    try { applyState(JSON.parse(txt)); toast(t('t_loaded')); }
+                    catch (err) { toast(t('t_json_err'), false); }
+                } else importOutline(txt);
+            };
+            reader.readAsText(f); e.target.value = '';
+        });
+
+        // ============ PNG（手绘 Canvas，含箭头） ============
+        function exportPng() {
+            const logic = state.mode === 'logic';
+            const b = bounds(); if (!b) { toast(t('t_empty'), false); return; }
+            const pad = 60, scale = 2;
+            const W = (b.maxX - b.minX) + pad * 2, H = (b.maxY - b.minY) + pad * 2;
+            const cv = document.createElement('canvas'); cv.width = W * scale; cv.height = H * scale;
+            const ctx = cv.getContext('2d'); ctx.scale(scale, scale);
+            const ox = pad - b.minX, oy = pad - b.minY;
+            ctx.fillStyle = '#F2F0E9'; ctx.fillRect(0, 0, W, H);
+
+            const box = {}; nodesArr().forEach(n => { box[n.id] = sizeOf(n.id); });
+
+            edgesArr().forEach(e => {
+                const p = state.nodes[e.from], c = state.nodes[e.to]; if (!p || !c) return;
+                const g = edgeGeom(p, c);
+                const x1 = g.x1 + ox, y1 = g.y1 + oy, x2 = g.x2 + ox, y2 = g.y2 + oy;
+                const c1x = g.c1x + ox, c1y = g.c1y + oy, c2x = g.c2x + ox, c2y = g.c2y + oy;
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.bezierCurveTo(c1x, c1y, c2x, c2y, x2, y2);
+                ctx.lineWidth = 2;
+                const col = logic ? (evalNode(e.to) ? 'rgba(16,185,129,.7)' : 'rgba(225,29,72,.55)') : 'rgba(124,58,237,.5)';
+                ctx.strokeStyle = col; ctx.stroke();
+                // 箭头
+                const ang = Math.atan2(y2 - c2y, x2 - c2x), s = 7;
+                ctx.beginPath(); ctx.moveTo(x2, y2);
+                ctx.lineTo(x2 - s * Math.cos(ang - 0.45), y2 - s * Math.sin(ang - 0.45));
+                ctx.lineTo(x2 - s * Math.cos(ang + 0.45), y2 - s * Math.sin(ang + 0.45));
+                ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+            });
+
+            nodesArr().forEach(n => {
+                const bx = box[n.id], x = n.x + ox, y = n.y + oy, w = bx.w, h = bx.h, r = 15;
+                const isRoot = n.id === state.rootId; const val = logic ? evalNode(n.id) : null;
+                roundRect(ctx, x, y, w, h, r);
+                if (isRoot) { const gr = ctx.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, '#DB2777'); gr.addColorStop(1, '#7C3AED'); ctx.fillStyle = gr; }
+                else ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                if (logic && !isRoot) ctx.strokeStyle = val ? '#10B981' : '#E11D48';
+                else if (n.color && !isRoot) ctx.strokeStyle = n.color + '88';
+                else if (!isRoot) ctx.strokeStyle = 'rgba(124,58,237,.2)';
+                else ctx.strokeStyle = 'transparent';
+                ctx.stroke();
+                ctx.fillStyle = isRoot ? '#ffffff' : '#2B2826';
+                ctx.font = (isRoot ? '700 16px "Noto Serif SC", serif' : '600 14px -apple-system, sans-serif');
+                ctx.textBaseline = 'middle';
+                let label = n.text;
+                if (logic && n.gate && n.gate !== 'none') label = '[' + (n.gate === 'VAR' ? (val ? 'VAR·T' : 'VAR·F') : n.gate) + '] ' + label;
+                wrapText(ctx, label, x + 14, y, w - 28, h);
+            });
+
+            cv.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = titleOf() + '.png'; a.click(); URL.revokeObjectURL(url);
+                toast(t('t_png'));
+            });
+        }
+        function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+        function wrapText(ctx, text, x, boxY, maxw, boxH) {
+            const words = text.split(''); const lines = []; let cur = '';
+            for (const ch of words) { if (ctx.measureText(cur + ch).width > maxw && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+            if (cur) lines.push(cur);
+            const lh = 18, total = lines.length * lh, startY = boxY + boxH / 2 - total / 2 + lh / 2;
+            lines.forEach((ln, i) => ctx.fillText(ln, x, startY + i * lh));
+        }
+
+        // ============ 工具 ============
+        function download(name, content, type) {
+            const blob = new Blob([content], { type: type + ';charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+        }
+        let toastT;
+        function toast(msg, ok = true) {
+            toastEl.innerHTML = (ok ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '<span></span>';
+            toastEl.querySelector('span').textContent = msg;
+            toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 1900);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && aboutMask.classList.contains('show')) { closeAbout(); return; }
+            if (document.activeElement && (document.activeElement.isContentEditable || document.activeElement.tagName === 'TEXTAREA')) return;
+            if (e.key === 'Delete' || e.key === 'Backspace') { if (state.selected) { e.preventDefault(); deleteSelected(); } }
+            else if (e.key === 'Tab' && selNode()) { e.preventDefault(); addChild(state.selected.id); }
+            else if (e.key === 'Enter') { e.preventDefault(); addFreeNode(); }
+            else if (e.key === 'Escape') deselect();
+        });
+
+        // ============ 颜色主题 ============
+        const THEMES = [
+            { id: 'leaf', name: '脉络', c: '#DB2777' },
+            { id: 'rose', name: '蔷薇', c: '#E11D74' },
+            { id: 'mint', name: '薄荷', c: '#0E9F6E' },
+            { id: 'sky', name: '青空', c: '#2563EB' },
+            { id: 'sand', name: '暖沙', c: '#C2680A' },
+            { id: 'dark', name: '暗夜', c: '#A78BFA' },
+        ];
+        function applyTheme(id) {
+            if (id && id !== 'leaf') document.body.setAttribute('data-theme', id);
+            else document.body.removeAttribute('data-theme');
+            localStorage.setItem('mindscape_theme', id || 'leaf');
+            document.querySelectorAll('#themeRow .theme-dot').forEach(d => d.classList.toggle('on', d.dataset.theme === (id || 'leaf')));
+        }
+        (function buildThemeRow() {
+            const row = document.getElementById('themeRow');
+            row.innerHTML = THEMES.map(t => `<button class="theme-dot" data-theme="${t.id}" title="${t.name}" style="background:${t.c}"></button>`).join('');
+            row.addEventListener('click', e => { const b = e.target.closest('.theme-dot'); if (b) applyTheme(b.dataset.theme); });
+        })();
+
+        // ============ 演示：沿连线流动的光点 ============
+        const fx = document.getElementById('fx');
+        let demo = { on: false, raf: 0, last: 0, emitT: 0, parts: [] };
+        function approxLen(g) { let len = 0, prev = cubicAt(g, 0); for (let i = 1; i <= 8; i++) { const p = cubicAt(g, i / 8); len += Math.hypot(p.x - prev.x, p.y - prev.y); prev = p; } return len; }
+        function spawnPart(from, to, hops) {
+            if (demo.parts.length > 600) return;
+            const p = state.nodes[from], c = state.nodes[to]; if (!p || !c) return;
+            const len = Math.max(60, approxLen(edgeGeom(p, c)));
+            demo.parts.push({ from, to, t: 0, spd: (150 * demoSettings.speed) / len, hops });
+        }
+        function emitFrom(id, hops) { edgesArr().forEach(e => { if (e.from === id) spawnPart(e.from, e.to, hops); }); }
+        function emitPulse() {
+            let roots = nodesArr().filter(n => parentsOf(n.id).length === 0);
+            if (!roots.length && state.rootId) roots = [state.nodes[state.rootId]];
+            roots.forEach(r => { flashNode(r.id); emitFrom(r.id, 0); });
+        }
+        function flashNode(id) { const el = nodeEls[id]; if (!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+        function demoLoop(now) {
+            if (!demo.on) return;
+            const dt = Math.min(0.05, (now - demo.last) / 1000); demo.last = now;
+            if (demoSettings.mode === 'loop') { demo.emitT += dt * 1000; if (demo.emitT >= demoSettings.freq) { demo.emitT = 0; emitPulse(); } }
+            const keep = [];
+            demo.parts.forEach(pt => {
+                pt.t += pt.spd * dt;
+                if (pt.t >= 1) { flashNode(pt.to); if (pt.hops < 28) emitFrom(pt.to, pt.hops + 1); }
+                else keep.push(pt);
+            });
+            demo.parts = keep;
+            let s = ''; const col = demoSettings.color;
+            demo.parts.forEach(pt => {
+                const p = state.nodes[pt.from], c = state.nodes[pt.to]; if (!p || !c) return;
+                const pos = cubicAt(edgeGeom(p, c), pt.t);
+                s += `<circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="9" fill="${col}" opacity="0.2"/><circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="4" fill="${col}"/>`;
+            });
+            fx.innerHTML = s;
+            if (demoSettings.mode === 'single' && demo.parts.length === 0) { stopDemo(); return; }
+            demo.raf = requestAnimationFrame(demoLoop);
+        }
+        function startDemo() {
+            if (!nodesArr().length) { toast(t('t_no_nodes'), false); return; }
+            demo.on = true; demo.parts = []; demo.emitT = 0; demo.last = performance.now();
+            emitPulse(); setDemoBtn(true); demo.raf = requestAnimationFrame(demoLoop);
+        }
+        function stopDemo() { demo.on = false; cancelAnimationFrame(demo.raf); demo.parts = []; if (fx) fx.innerHTML = ''; setDemoBtn(false); }
+        function toggleDemo() { demo.on ? stopDemo() : startDemo(); }
+        function setDemoBtn(on) {
+            const btn = document.getElementById('demoToggle');
+            btn.classList.toggle('stop', on);
+            btn.querySelector('span').textContent = on ? t('demo_stop') : t('demo_start');
+            btn.querySelector('svg').innerHTML = on ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>' : '<path d="M5 3l14 9-14 9V3z"/>';
+            document.getElementById('demoBtn').classList.toggle('dark', on);
+        }
+        function syncDemoUI() {
+            document.querySelectorAll('#demoModeSeg button').forEach(b => b.classList.toggle('on', b.dataset.dm === demoSettings.mode));
+            document.getElementById('freqRow').style.display = demoSettings.mode === 'loop' ? '' : 'none';
+            document.getElementById('demoFreq').value = demoSettings.freq;
+            document.getElementById('freqVal').textContent = (demoSettings.freq / 1000).toFixed(1) + 's';
+            document.getElementById('demoSpeed').value = demoSettings.speed;
+            document.getElementById('speedVal').textContent = demoSettings.speed.toFixed(1) + '×';
+            const cc = document.getElementById('demoColors');
+            if (!cc.dataset.built) { cc.innerHTML = DEMO_COLORS.map(c => `<button data-c="${c}" style="background:${c}"></button>`).join(''); cc.dataset.built = '1'; }
+            cc.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.c === demoSettings.color));
+        }
+        const demoPanel = document.getElementById('demoPanel');
+        document.getElementById('demoBtn').onclick = (e) => { e.stopPropagation(); demoPanel.classList.toggle('open'); };
+        demoPanel.addEventListener('click', e => e.stopPropagation());
+        document.getElementById('demoToggle').onclick = toggleDemo;
+        document.getElementById('demoModeSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; demoSettings.mode = b.dataset.dm; syncDemoUI(); scheduleSave(); });
+        document.getElementById('demoFreq').addEventListener('input', e => { demoSettings.freq = +e.target.value; document.getElementById('freqVal').textContent = (demoSettings.freq / 1000).toFixed(1) + 's'; scheduleSave(); });
+        document.getElementById('demoSpeed').addEventListener('input', e => { demoSettings.speed = +e.target.value; document.getElementById('speedVal').textContent = demoSettings.speed.toFixed(1) + '×'; scheduleSave(); });
+        document.getElementById('demoColors').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; demoSettings.color = b.dataset.c; syncDemoUI(); scheduleSave(); });
+
+        // ============ 关于 ============
+        const REPO_URL = 'https://github.com/'; // TODO: 替换为你的仓库地址
+        const aboutMask = document.getElementById('aboutMask');
+        function openAbout() { aboutMask.classList.add('show'); }
+        function closeAbout() { aboutMask.classList.remove('show'); }
+        document.getElementById('aboutBtn').onclick = openAbout;
+        document.getElementById('aboutClose').onclick = closeAbout;
+        document.getElementById('aboutRepo').href = REPO_URL;
+        aboutMask.addEventListener('click', e => { if (e.target === aboutMask) closeAbout(); });
+
+        // ============ 文档历史 + 自动保存 ============
+        const SKEY = 'mindscape_store_v1';
+        let store = { activeId: null, docs: {} };
+        let saveT = 0;
+        function loadStore() { try { const s = JSON.parse(localStorage.getItem(SKEY)); if (s && s.docs) store = s; } catch (e) {} }
+        function persistStore() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) { toast(t('t_storage_full'), false); } }
+        function scheduleSave() { if (!store.activeId) return; clearTimeout(saveT); saveT = setTimeout(saveActive, 500); }
+        function saveActive() {
+            if (!store.activeId) return; const doc = store.docs[store.activeId]; if (!doc) return;
+            doc.state = serialize();
+            doc.title = ((state.nodes[state.rootId] && state.nodes[state.rootId].text) || t('unnamed')).replace(/\n/g, ' ').slice(0, 42);
+            doc.nodeCount = nodesArr().length; doc.updatedAt = Date.now();
+            persistStore(); renderDocList();
+        }
+        function timeAgo(ts) { const s = (Date.now() - ts) / 1000; if (s < 60) return t('t_just'); if (s < 3600) return Math.floor(s / 60) + ' ' + t('t_min'); if (s < 86400) return Math.floor(s / 3600) + ' ' + t('t_hour'); const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()}`; }
+        const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        function renderDocList() {
+            const list = document.getElementById('docList');
+            const docs = Object.values(store.docs).sort((a, b) => b.updatedAt - a.updatedAt);
+            list.innerHTML = docs.map(d => `<div class="doc-item${d.id === store.activeId ? ' active' : ''}" data-id="${d.id}"><div class="dt">${escapeHtml(d.title || t('unnamed'))}</div><div class="dm">${d.nodeCount || 0} ${t('doc_nodes')} · ${timeAgo(d.updatedAt)}</div><button class="dx" data-del="${d.id}" title="${t('del')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`).join('') || `<div style="padding:24px 12px;text-align:center;color:var(--ink-faint);font-size:12px">${t('sb_empty')}</div>`;
+        }
+        function genId() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+        function newDoc() {
+            saveActive();
+            const id = genId();
+            store.docs[id] = { id, title: t('new_doc'), createdAt: Date.now(), updatedAt: Date.now(), state: null, nodeCount: 0 };
+            store.activeId = id;
+            seed(); saveActive(); renderDocList();
+        }
+        function switchDoc(id) {
+            if (id === store.activeId) return;
+            saveActive(); clearTimeout(saveT);
+            store.activeId = id;
+            const doc = store.docs[id];
+            if (doc && doc.state) applyState(doc.state); else seed();
+            persistStore(); renderDocList();
+        }
+        function deleteDoc(id) {
+            delete store.docs[id];
+            if (store.activeId === id) {
+                const rest = Object.values(store.docs).sort((a, b) => b.updatedAt - a.updatedAt);
+                store.activeId = null;
+                if (rest.length) switchDoc(rest[0].id); else newDoc();
+            }
+            persistStore(); renderDocList();
+        }
+        document.getElementById('docList').addEventListener('click', e => {
+            const del = e.target.closest('[data-del]');
+            if (del) { e.stopPropagation(); deleteDoc(del.dataset.del); return; }
+            const item = e.target.closest('.doc-item'); if (item) switchDoc(item.dataset.id);
+        });
+        document.getElementById('newDocBtn').onclick = newDoc;
+        const sidebar = document.getElementById('sidebar');
+        document.getElementById('menuBtn').onclick = (e) => { e.stopPropagation(); sidebar.classList.toggle('show'); };
+        document.addEventListener('click', (e) => {
+            demoPanel.classList.remove('open');
+            if (sidebar.classList.contains('show') && !e.target.closest('#sidebar') && !e.target.closest('#menuBtn')) sidebar.classList.remove('show');
+        });
+
+        // ============ 启动 ============
+        buildLangSel();
+        applyLang(detectLang());
+        applyTheme(localStorage.getItem('mindscape_theme') || 'leaf');
+        syncDemoUI();
+        loadStore();
+        const activeDoc = store.activeId && store.docs[store.activeId];
+        if (activeDoc && activeDoc.state) { applyState(activeDoc.state); renderDocList(); }
+        else {
+            const existing = Object.values(store.docs).sort((a, b) => b.updatedAt - a.updatedAt);
+            if (existing.length) { store.activeId = existing[0].id; if (existing[0].state) applyState(existing[0].state); else seed(); renderDocList(); }
+            else newDoc();
+        }
+        applyView();
+    })();
+    </script>
+</body>
+
+</html>
