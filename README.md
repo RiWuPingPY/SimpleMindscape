@@ -42,8 +42,6 @@ npm run dist            # 生成 NSIS 安装包 + 便携版
 - **关于面板**：左侧栏底部「关于」，含作者信息（[pingyi.me](https://pingyi.me)）与项目链接。
 - **多语言**：12 种界面语言 —— 简体中文 / 繁體中文 / English / 日本語 / 한국어 / Français / Deutsch / Español / Português / Русский / العربية（含 RTL）/ हिन्दी。首次按浏览器语言自动选择，可在左侧栏底部切换并记忆。
 
-> 提示：把 `index.html` 里 `REPO_URL` 改成你的 GitHub 仓库地址，关于面板的链接即生效。直接把整个文件夹推到 GitHub 即可（可配 GitHub Pages 在线访问 `index.html`）。
-
 ## 快捷键
 
 | 键 | 作用 |
